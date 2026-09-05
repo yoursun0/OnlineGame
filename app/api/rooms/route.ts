@@ -1,0 +1,23 @@
+import { NextRequest } from 'next/server';
+import { errorResponse, getAdminClient, getAuthenticatedGuest, readJson } from '../_lib/supabase-admin';
+
+export async function POST(request: NextRequest) {
+  try {
+    const admin = getAdminClient();
+    const guest = await getAuthenticatedGuest(request, admin);
+    const body = await readJson(request) as { gameSlug?: string; mode?: string; displayName?: string };
+    if (body.gameSlug !== 'tic-tac-toe') throw new Error('Only Tic-tac-toe rooms are available.');
+    if (body.mode !== 'realtime' && body.mode !== 'turn_based') throw new Error('Choose a supported room mode.');
+    const displayName = typeof body.displayName === 'string' ? body.displayName.trim().slice(0, 32) : '';
+    const { data: roomId, error } = await admin.rpc('create_room_for_guest', {
+      p_guest_id: guest.id,
+      p_game_slug: body.gameSlug,
+      p_mode: body.mode,
+      p_display_name: displayName || 'Guest',
+    });
+    if (error) throw error;
+    const { data: room, error: roomError } = await admin.from('rooms').select('code').eq('id', roomId).single();
+    if (roomError) throw roomError;
+    return Response.json({ code: room.code });
+  } catch (error) { return errorResponse(error); }
+}
