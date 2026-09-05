@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { errorResponse, getAdminClient, getAuthenticatedGuest, readJson } from '../_lib/supabase-admin';
+import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../_lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
     const body = await readJson(request) as { gameSlug?: string; mode?: string; displayName?: string };
     if (body.gameSlug !== 'tic-tac-toe') throw new Error('Only Tic-tac-toe rooms are available.');
     if (body.mode !== 'realtime' && body.mode !== 'turn_based') throw new Error('Choose a supported room mode.');
-    const displayName = typeof body.displayName === 'string' ? body.displayName.trim().slice(0, 32) : '';
+    const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+    if (displayName.length > 32) throw new ApiError('Display name must be 32 characters or fewer.', 400);
+    await enforceRateLimit(admin, guest.id, 'create-room', getClientIpHash(request), 5, 60);
     const { data: roomId, error } = await admin.rpc('create_room_for_guest', {
       p_guest_id: guest.id,
       p_game_slug: body.gameSlug,

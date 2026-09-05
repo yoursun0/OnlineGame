@@ -41,7 +41,7 @@ export default function HomePage() {
 
       <section className="join-strip" id="join" aria-labelledby="join-title"><div><p className="eyebrow">ALREADY HAVE A ROOM CODE?</p><h2 id="join-title">Jump straight in.</h2></div><JoinRoomForm /></section>
 
-      <footer className="footer"><span>PLAYROOM / 玩房</span><span>Anonymous by design · temporary by default</span><GuestSession /></footer>
+      <footer className="footer"><span>PLAYROOM / 玩房</span><span>Anonymous by design · temporary by default</span><span className="privacy-notice">Temporary guest sessions are used for play; operational logs and abuse controls may apply.</span><GuestSession /></footer>
     </main>
   );
 }
