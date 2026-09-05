@@ -1,0 +1,1 @@
+-- Development seed data is intentionally empty for the anonymous foundation.
