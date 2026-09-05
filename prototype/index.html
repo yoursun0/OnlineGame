@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PLAYROOM — anonymous game portal prototype</title>
+  <style>
+    :root {
+      --ink: #17172e;
+      --ink-2: #262645;
+      --paper: #fff8e8;
+      --paper-2: #f5edd9;
+      --coral: #ff715b;
+      --saffron: #ffbf5b;
+      --mint: #a6e8c5;
+      --sky: #9ed8e9;
+      --lilac: #cdbcf4;
+      --muted: #a9a7c6;
+      --line: rgba(255,255,255,.12);
+      --shadow: 0 22px 70px rgba(8, 9, 27, .35);
+      --display: "Arial Rounded MT Bold", "Trebuchet MS", "Noto Sans TC", sans-serif;
+      --body: Inter, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--paper);
+      background:
+        radial-gradient(circle at 78% 9%, rgba(205,188,244,.18), transparent 22rem),
+        radial-gradient(circle at 17% 31%, rgba(166,232,197,.12), transparent 24rem),
+        var(--ink);
+      font-family: var(--body);
+      min-height: 100vh;
+    }
+    body[data-variant="paper"] {
+      --ink: #f6eedb;
+      --ink-2: #fffaf0;
+      --paper: #24223e;
+      --paper-2: #ebe0c5;
+      --muted: #716c85;
+      --line: rgba(36,34,62,.12);
+      --shadow: 0 22px 70px rgba(77, 56, 26, .16);
+      background: radial-gradient(circle at 80% 10%, rgba(255,113,91,.18), transparent 23rem), var(--ink);
+    }
+    body[data-variant="citrus"] {
+      --ink: #112b2d;
+      --ink-2: #183c3d;
+      --paper: #f6ffd8;
+      --paper-2: #e1f1bd;
+      --coral: #ff846b;
+      --saffron: #fbd24b;
+      --mint: #baf3cf;
+      --muted: #9ec3b4;
+      background: radial-gradient(circle at 70% 15%, rgba(251,210,75,.14), transparent 22rem), var(--ink);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--saffron); outline-offset: 3px; }
+    .shell { width: min(1180px, calc(100% - 42px)); margin: 0 auto; }
+    .topbar { height: 88px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; color: var(--paper); text-decoration: none; }
+    .brand-mark { width: 38px; height: 38px; border: 2px solid var(--paper); border-radius: 13px 13px 13px 5px; display: grid; place-items: center; position: relative; transform: rotate(-5deg); }
+    .brand-mark::before, .brand-mark::after { content: ""; position: absolute; border-radius: 50%; background: var(--coral); width: 7px; height: 7px; top: 8px; }
+    .brand-mark::before { left: 9px; box-shadow: 12px 0 var(--saffron); }
+    .brand-mark::after { width: 5px; height: 5px; left: 16px; bottom: 7px; top: auto; background: var(--mint); }
+    .brand-name { letter-spacing: .12em; font-size: 14px; font-weight: 900; }
+    .top-actions { display: flex; align-items: center; gap: 14px; }
+    .tiny-status { color: var(--muted); font-size: 12px; display: inline-flex; gap: 8px; align-items: center; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 5px rgba(166,232,197,.12); }
+    .ghost-btn, .primary-btn, .soft-btn { border: 0; border-radius: 999px; padding: 12px 17px; font-weight: 800; transition: transform .2s ease, box-shadow .2s ease, background .2s ease; }
+    .ghost-btn { background: transparent; color: var(--paper); border: 1px solid var(--line); }
+    .ghost-btn:hover, .soft-btn:hover, .primary-btn:hover { transform: translateY(-2px); }
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 58px; align-items: center; padding: 67px 0 78px; }
+    .hero > * { min-width: 0; }
+    .eyebrow { color: var(--saffron); font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; margin: 0 0 20px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-family: var(--display); font-size: clamp(48px, 7vw, 86px); line-height: .95; letter-spacing: -.07em; max-width: 680px; margin-bottom: 25px; }
+    h1 em { color: var(--coral); font-style: normal; display: inline-block; transform: rotate(-2deg); }
+    .hero-copy { max-width: 535px; color: var(--muted); font-size: 17px; line-height: 1.65; }
+    .hero-copy strong { color: var(--paper); font-weight: 800; }
+    .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 30px; }
+    .primary-btn { color: var(--ink); background: var(--saffron); box-shadow: 0 12px 28px rgba(255,191,91,.2); }
+    .soft-btn { color: var(--paper); background: var(--ink-2); border: 1px solid var(--line); }
+    .room-form { display: flex; gap: 8px; align-items: center; margin-top: 21px; padding: 6px; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 16px; width: min(100%, 370px); }
+    .room-form input { background: transparent; border: 0; color: var(--paper); min-width: 0; flex: 1; padding: 10px 12px; text-transform: uppercase; letter-spacing: .16em; font-weight: 900; }
+    .room-form input::placeholder { color: var(--muted); letter-spacing: .08em; font-weight: 700; }
+    .room-form button { border: 0; border-radius: 11px; padding: 11px 14px; color: var(--ink); background: var(--mint); font-weight: 900; }
+    .radar-wrap { position: relative; min-height: 430px; min-width: 0; display: grid; place-items: center; }
+    .radar { width: min(100%, 425px); max-width: 100%; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--line); position: relative; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle, rgba(255,255,255,.08), transparent 58%); box-shadow: inset 0 0 60px rgba(255,255,255,.05), var(--shadow); }
+    .radar::before, .radar::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid var(--line); }
+    .radar::before { inset: 15%; }
+    .radar::after { inset: 30%; }
+    .radar-cross::before, .radar-cross::after { content: ""; position: absolute; background: var(--line); }
+    .radar-cross::before { width: 1px; height: 100%; left: 50%; }
+    .radar-cross::after { height: 1px; width: 100%; top: 50%; }
+    .radar-core { z-index: 2; text-align: center; background: var(--coral); width: 146px; height: 146px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); transform: rotate(-7deg); box-shadow: 12px 20px 0 rgba(255,191,91,.26); }
+    .radar-core div { transform: rotate(7deg); }
+    .radar-core strong { display: block; font-family: var(--display); font-size: 24px; letter-spacing: -.05em; }
+    .radar-core span { display: block; font-size: 10px; font-weight: 900; letter-spacing: .12em; margin-top: 5px; }
+    .orbit { position: absolute; inset: 0; animation: spin 28s linear infinite; }
+    .token { position: absolute; display: grid; place-items: center; border-radius: 50%; width: 42px; height: 42px; font-size: 14px; font-weight: 900; border: 2px solid var(--ink); box-shadow: 0 8px 0 rgba(0,0,0,.12); }
+    .token-a { top: 9%; left: 17%; background: var(--mint); transform: rotate(-9deg); }
+    .token-b { top: 18%; right: 8%; background: var(--saffron); transform: rotate(8deg); }
+    .token-c { bottom: 15%; right: 15%; background: var(--sky); transform: rotate(-8deg); }
+    .token-d { bottom: 8%; left: 24%; background: var(--lilac); transform: rotate(7deg); }
+    .radar-label { position: absolute; font-size: 10px; font-weight: 900; letter-spacing: .12em; color: var(--muted); }
+    .radar-label.one { top: 13%; right: 31%; }
+    .radar-label.two { bottom: 22%; left: 11%; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 20px; }
+    .section-head h2 { font-family: var(--display); font-size: 34px; letter-spacing: -.05em; margin-bottom: 0; }
+    .section-head p { color: var(--muted); margin-bottom: 3px; font-size: 13px; }
+    .games { padding: 9px 0 130px; }
+    .game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .game-card { position: relative; overflow: hidden; min-height: 275px; padding: 23px; border-radius: 22px; color: var(--ink); display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 12px 0 rgba(0,0,0,.08); transition: transform .25s ease, box-shadow .25s ease; }
+    .game-card:hover { transform: translateY(-6px) rotate(-.4deg); box-shadow: 0 18px 0 rgba(0,0,0,.1); }
+    .game-card.coral { background: var(--coral); }
+    .game-card.mint { background: var(--mint); }
+    .game-card.lilac { background: var(--lilac); }
+    .game-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+    .game-tag { font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; opacity: .7; }
+    .game-icon { font-size: 50px; line-height: .8; transform: rotate(-6deg); }
+    .game-card h3 { font-family: var(--display); font-size: 27px; letter-spacing: -.05em; margin-bottom: 6px; }
+    .game-card p { font-size: 13px; line-height: 1.5; opacity: .75; max-width: 220px; margin-bottom: 0; }
+    .game-bottom { display: flex; justify-content: space-between; gap: 10px; align-items: center; font-size: 11px; font-weight: 900; }
+    .game-bottom button { border: 1px solid rgba(23,23,46,.22); background: rgba(255,255,255,.23); border-radius: 10px; padding: 8px 10px; color: inherit; font-weight: 900; }
+    .game-card.coming { color: var(--paper); background: var(--ink-2); border: 1px dashed var(--line); box-shadow: none; }
+    .game-card.coming .game-bottom button { border-color: var(--line); color: var(--paper); background: transparent; }
+    .how { display: grid; grid-template-columns: .7fr 1.3fr; gap: 40px; align-items: start; padding: 32px 0 75px; border-top: 1px solid var(--line); }
+    .how h2 { font-family: var(--display); font-size: 31px; letter-spacing: -.06em; }
+    .step-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+    .step { border-left: 1px solid var(--line); padding-left: 17px; }
+    .step b { display: grid; place-items: center; width: 28px; height: 28px; color: var(--ink); background: var(--saffron); border-radius: 8px; font-size: 12px; margin-bottom: 17px; }
+    .step h3 { font-size: 16px; margin-bottom: 7px; }
+    .step p { color: var(--muted); font-size: 12px; line-height: 1.6; margin-bottom: 0; }
+    footer { color: var(--muted); font-size: 11px; padding: 0 0 30px; display: flex; justify-content: space-between; gap: 10px; }
+    .theme-dock { position: fixed; z-index: 10; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; background: rgba(23,23,46,.9); backdrop-filter: blur(18px); border: 1px solid var(--line); padding: 6px; border-radius: 999px; box-shadow: 0 12px 35px rgba(0,0,0,.25); }
+    .theme-dock button { border: 0; border-radius: 999px; padding: 7px 11px; font-size: 10px; color: var(--muted); background: transparent; font-weight: 900; }
+    .theme-dock button.active { background: var(--paper); color: var(--ink); }
+    .modal-backdrop { position: fixed; z-index: 20; inset: 0; display: none; place-items: center; padding: 20px; background: rgba(7,7,18,.72); backdrop-filter: blur(9px); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(100%, 520px); background: var(--ink-2); border: 1px solid var(--line); border-radius: 25px; padding: 26px; box-shadow: var(--shadow); position: relative; }
+    .modal h2 { font-family: var(--display); font-size: 30px; letter-spacing: -.06em; margin-bottom: 6px; }
+    .modal > p { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 22px; }
+    .modal-close { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--paper); font-size: 18px; }
+    .form-label { color: var(--muted); display: block; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; margin: 17px 0 8px; }
+    .modal input, .select-like { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; color: var(--paper); background: rgba(255,255,255,.05); }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mode-card { text-align: left; border: 1px solid var(--line); border-radius: 13px; background: transparent; color: var(--paper); padding: 12px; }
+    .mode-card.selected { border-color: var(--saffron); background: rgba(255,191,91,.12); }
+    .mode-card strong, .mode-card span { display: block; }
+    .mode-card strong { font-size: 13px; margin-bottom: 4px; }
+    .mode-card span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .modal-submit { width: 100%; margin-top: 22px; border: 0; border-radius: 13px; padding: 14px; color: var(--ink); background: var(--saffron); font-weight: 900; }
+    .toast { position: fixed; z-index: 30; top: 25px; left: 50%; transform: translate(-50%, -120px); background: var(--paper); color: var(--ink); padding: 12px 17px; border-radius: 12px; font-size: 12px; font-weight: 900; box-shadow: var(--shadow); transition: transform .25s ease; }
+    .toast.show { transform: translate(-50%, 0); }
+    @media (max-width: 820px) {
+      .hero { grid-template-columns: 1fr; gap: 30px; padding-top: 45px; }
+      .radar-wrap { min-height: 350px; }
+      .radar { width: min(100%, 350px); }
+      .game-grid { grid-template-columns: 1fr 1fr; }
+      .how { grid-template-columns: 1fr; gap: 22px; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 28px, 1180px); }
+      .topbar { height: 70px; }
+      .top-actions .tiny-status { display: none; }
+      h1 { font-size: 53px; }
+      .hero { padding: 36px 0 54px; }
+      .hero-copy { font-size: 15px; }
+      .radar-wrap { min-height: 310px; }
+      .game-grid, .step-list { grid-template-columns: 1fr; }
+      .game-card { min-height: 235px; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 6px; }
+      footer { display: block; line-height: 1.8; padding-bottom: 82px; }
+      .theme-dock { width: calc(100% - 28px); justify-content: center; }
+      .theme-dock button { flex: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body data-variant="night">
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="PLAYROOM home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">PLAYROOM</span>
+      </a>
+      <div class="top-actions">
+        <span class="tiny-status"><i class="pulse"></i><span id="online-count">1,284 players online</span></span>
+        <button class="ghost-btn" id="header-create">開房間</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Anonymous multiplayer · 無需登入</p>
+          <h1>唔使登入。<br /><em>即刻開局。</em></h1>
+          <p class="hero-copy">一個房號，兩個玩家，零個註冊表格。揀隻遊戲、開個房、send code 畀朋友——<strong>turn-based 或 real-time，由你話事。</strong></p>
+          <div class="hero-actions">
+            <button class="primary-btn" id="hero-create">＋ 開一間新房</button>
+            <a class="soft-btn" href="#games">睇下玩咩 ↓</a>
+          </div>
+          <form class="room-form" id="join-form">
+            <input id="room-code" maxlength="7" autocomplete="off" placeholder="輸入房號，例如 TIK-7Q4" aria-label="Room code" />
+            <button type="submit">入房 →</button>
+          </form>
+        </div>
+        <div class="radar-wrap" aria-label="Live room radar preview">
+          <div class="radar">
+            <div class="radar-cross"></div>
+            <div class="orbit">
+              <span class="token token-a">XO</span><span class="token token-b">42</span><span class="token token-c">↗</span><span class="token token-d">骰</span>
+            </div>
+            <span class="radar-label one">OPEN ROOMS</span><span class="radar-label two">NO LOGIN NEEDED</span>
+            <div class="radar-core"><div><strong>READY?</strong><span>ROOM RADAR / 24</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="games" id="games">
+        <div class="section-head"><div><p class="eyebrow">Pick a tiny universe</p><h2>揀隻遊戲先。</h2></div><p>兩分鐘內開局 · 朋友同陌生人都得</p></div>
+        <div class="game-grid">
+          <article class="game-card coral" data-game="tic-tac-toe">
+            <div class="game-top"><span class="game-tag">2 players · 2–5 min</span><span class="game-icon">✕◯</span></div>
+            <div><h3>Tic-tac-toe</h3><p>簡單，但唔代表容易贏。三格連線，先手有優勢？</p></div>
+            <div class="game-bottom"><span>REAL-TIME · TURN-BASED</span><button class="play-game">開房 →</button></div>
+          </article>
+          <article class="game-card mint" data-game="stairs">
+            <div class="game-top"><span class="game-tag">2–4 players · 5–10 min</span><span class="game-icon">⇧</span></div>
+            <div><h3>小朋友落樓梯</h3><p>擲骰、落樓梯、避開嗰啲你唔應該踩嘅格仔。</p></div>
+            <div class="game-bottom"><span>TURN-BASED</span><button class="play-game">開房 →</button></div>
+          </article>
+          <article class="game-card lilac coming" data-game="connect-four">
+            <div class="game-top"><span class="game-tag">Coming next · 2 players</span><span class="game-icon">▦</span></div>
+            <div><h3>四子棋</h3><p>一條直線，四粒棋。呢張卡係用嚟收集你下一個願望。</p></div>
+            <div class="game-bottom"><span>ON THE WISHLIST</span><button class="wish-game">想玩呢隻</button></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="how">
+        <div><p class="eyebrow">The tiny ritual</p><h2>三步，<br />唔使諗太多。</h2></div>
+        <div class="step-list">
+          <div class="step"><b>01</b><h3>揀遊戲</h3><p>每款遊戲都標示人數、時間同支援模式，唔使估。</p></div>
+          <div class="step"><b>02</b><h3>開房 / 入房</h3><p>用一個短 code 分享。唔洗 email，唔洗 username。</p></div>
+          <div class="step"><b>03</b><h3>Ready, set, play</h3><p>即時收到對手嘅動作；turn-based 就慢慢嚟。</p></div>
+        </div>
+      </section>
+    </main>
+    <footer><span>PLAYROOM prototype · designed for quick games and low friction</span><span>Anonymous by default · prototype state stays in this browser</span></footer>
+  </div>
+
+  <div class="theme-dock" aria-label="Prototype visual variations">
+    <button data-theme="night" class="active">夜市版</button><button data-theme="paper">紙牌版</button><button data-theme="citrus">青檸版</button>
+  </div>
+
+  <div class="modal-backdrop" id="create-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+      <p class="eyebrow">Create a room · 開新房</p>
+      <h2 id="modal-title">揀好遊戲，就等朋友入嚟。</h2>
+      <p>Prototype only: button actions are local. Production version will create a Supabase room and return a shareable URL.</p>
+      <label class="form-label" for="modal-game">Game</label>
+      <select class="select-like" id="modal-game"><option value="tic-tac-toe">Tic-tac-toe · 2 players</option><option value="stairs">小朋友落樓梯 · 2–4 players</option></select>
+      <label class="form-label">Play mode</label>
+      <div class="mode-grid"><button class="mode-card selected" data-mode="realtime"><strong>⚡ Real-time</strong><span>雙方在線，動作即刻同步。</span></button><button class="mode-card" data-mode="turn_based"><strong>◷ Turn-based</strong><span>輪到你先玩，遲啲返嚟都得。</span></button></div>
+      <label class="form-label" for="guest-name">Your display name <small>(optional)</small></label>
+      <input id="guest-name" maxlength="24" placeholder="例如：夜更玩家 42" />
+      <button class="modal-submit" id="create-submit">建立房間 →</button>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const body = document.body;
+    const modal = document.querySelector('#create-modal');
+    const toast = document.querySelector('#toast');
+    let selectedMode = 'realtime';
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+
+    function openModal(game = 'tic-tac-toe') {
+      document.querySelector('#modal-game').value = game;
+      modal.classList.add('open');
+      document.querySelector('#guest-name').focus();
+    }
+
+    function closeModal() { modal.classList.remove('open'); }
+
+    document.querySelector('#header-create').addEventListener('click', () => openModal());
+    document.querySelector('#hero-create').addEventListener('click', () => openModal());
+    document.querySelector('#modal-close').addEventListener('click', closeModal);
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
+
+    document.querySelectorAll('.play-game').forEach((button) => {
+      button.addEventListener('click', (event) => openModal(event.target.closest('.game-card').dataset.game));
+    });
+
+    document.querySelectorAll('.mode-card').forEach((button) => {
+      button.addEventListener('click', () => {
+        selectedMode = button.dataset.mode;
+        document.querySelectorAll('.mode-card').forEach((card) => card.classList.toggle('selected', card === button));
+      });
+    });
+
+    document.querySelector('#create-submit').addEventListener('click', () => {
+      const guest = document.querySelector('#guest-name').value.trim() || '夜更玩家';
+      const gamePrefixes = { 'tic-tac-toe': 'TIK', stairs: 'LAD' };
+      const game = document.querySelector('#modal-game').value;
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const suffix = Array.from({length: 3}, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+      const code = `${gamePrefixes[game] || 'PLY'}-${suffix}`;
+      closeModal();
+      showToast(`${guest} 開咗房 ${code} · ${selectedMode === 'realtime' ? 'Real-time' : 'Turn-based'}`);
+    });
+
+    document.querySelector('#join-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const code = document.querySelector('#room-code').value.trim().toUpperCase();
+      if (!code) { showToast('輸入房號先，例如 TIK-7Q4'); return; }
+      showToast(`搵緊 ${code}… prototype 會接駁 Supabase Realtime`);
+    });
+
+    document.querySelector('.wish-game').addEventListener('click', () => showToast('已記低。四子棋會係下一個 vertical slice。'));
+
+    const params = new URLSearchParams(window.location.search);
+    const initialTheme = params.get('v');
+    if (['night', 'paper', 'citrus'].includes(initialTheme)) body.dataset.variant = initialTheme;
+    document.querySelectorAll('[data-theme]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.theme === body.dataset.variant);
+      button.addEventListener('click', () => {
+        body.dataset.variant = button.dataset.theme;
+        document.querySelectorAll('[data-theme]').forEach((b) => b.classList.toggle('active', b === button));
+        const next = new URL(window.location.href);
+        next.searchParams.set('v', button.dataset.theme);
+        window.history.replaceState({}, '', next);
+      });
+    });
+
+    let online = 1284;
+    window.setInterval(() => {
+      online += Math.random() > .5 ? 1 : -1;
+      document.querySelector('#online-count').textContent = `${online.toLocaleString()} players online`;
+    }, 3000);
+  </script>
+</body>
+</html>
