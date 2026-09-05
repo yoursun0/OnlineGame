@@ -1,0 +1,13 @@
+{
+  "name": "onlinegame",
+  "private": true,
+  "description": "PLAYROOM anonymous multiplayer game portal",
+  "workspaces": [
+    "games/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "supabase": "^2.116.0",
+    "vercel": "^59.11.7"
+  }
+}
