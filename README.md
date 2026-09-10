@@ -63,11 +63,11 @@ Useful checks:
 bun run typecheck
 bun run build
 
-# with `bun run dev` running in another terminal
-bun run test
+# starts a local Next.js test server automatically when `PLAYROOM_TEST_URL` is not set
+bun test
 ```
 
-The integration test reads `.env.local` and defaults to `http://localhost:3000`; start `bun run dev` first. To test a deployed target, set `PLAYROOM_TEST_URL` for that shell before running `bun test`. The test creates temporary users and rooms, then deletes them in `afterAll`.
+The integration tests read `.env.local`, use the hosted development Supabase project, and default to `http://127.0.0.1:3000`. `bun test` starts and stops a local Next.js test server automatically; set `PLAYROOM_TEST_URL` to test a deployed target instead. Test records are temporary and deleted in `afterAll`.
 
 The original static concept can still be previewed without Next.js:
 

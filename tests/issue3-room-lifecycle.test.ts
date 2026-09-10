@@ -19,6 +19,7 @@ const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshTok
 const anon = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
 const userIds: string[] = [];
 const roomCodes: string[] = [];
+const testWithTimeout = test as unknown as (name: string, callback: () => Promise<void>, timeout: number) => void;
 
 async function createTestUser(label: string) {
   const email = `issue3-${label}-${crypto.randomUUID()}@example.test`;
@@ -57,10 +58,12 @@ afterAll(async () => {
   for (const userId of userIds) await admin.auth.admin.deleteUser(userId);
 });
 
-test('Issue #3 recovery, lifecycle, abuse controls, and anonymous reporting', async () => {
+testWithTimeout('Issue #3 recovery, lifecycle, abuse controls, and anonymous reporting', async () => {
   const host = await createTestUser('host');
   const guest = await createTestUser('guest');
   const code = await createRoom(host.token, 'Host');
+
+  expect((await api('/api/rooms', host.token, { gameSlug: 'tic-tac-toe', mode: 'realtime', displayName: 'Realtime' })).response.status).toBe(400);
 
   const joined = await api(`/api/rooms/${code}`, guest.token, { action: 'join', displayName: 'Guest' });
   expect(joined.response.status).toBe(200);
@@ -100,4 +103,4 @@ test('Issue #3 recovery, lifecycle, abuse controls, and anonymous reporting', as
   }
   roomCodes.push(...rateLimitedCodes);
   expect((await api(`/api/rooms/${code}`, host.token)).payload?.room.version).toBe(2);
-});
+}, 30000);

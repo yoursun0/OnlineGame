@@ -1,0 +1,6 @@
+[test]
+preload = ["./tests/test-preload.ts"]
+timeout = 30000
+
+[run]
+noOrphans = true

@@ -30,7 +30,7 @@ export default function HomePage() {
             <article className="game-card game-card-featured" key={game.slug}>
               <div className="card-topline"><span className="game-prefix">{game.roomPrefix} / 001</span><span className="status-dot">READY</span></div>
               <div className="card-art" aria-hidden="true"><span>×</span><span>○</span><span>×</span><span>○</span><span>×</span><span>○</span><span>×</span><span>○</span><span>×</span></div>
-              <div className="card-content"><h3>{game.title}</h3><p>{game.shortDescription}</p><div className="card-meta"><span>{game.players.min}–{game.players.max} players</span><span>~{game.estimatedMinutes} min</span><span>real-time / turn-based</span></div></div>
+              <div className="card-content"><h3>{game.title}</h3><p>{game.shortDescription}</p><div className="card-meta"><span>{game.players.min}–{game.players.max} players</span><span>~{game.estimatedMinutes} min</span><span>{game.supports.map((mode) => mode === 'turn_based' ? 'turn-based' : 'real-time').join(' / ')}</span></div></div>
               <CreateRoomButton />
             </article>
           ))}

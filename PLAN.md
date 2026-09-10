@@ -8,11 +8,18 @@
 PLAYROOM is a frictionless lobby for short multiplayer games. A visitor should be able to reach a playable screen in under 30 seconds:
 
 1. Pick a game.
-2. Choose `real-time` or `turn-based` play.
+2. Use the selected game's supported mode (`turn-based` for Tic-tac-toe; future games may support `real-time`).
 3. Create a room or enter a room code.
 4. Share the short room code/link when creating a room, then start.
 
 No account, email, password, or profile setup is required. A temporary guest identity is generated in the browser and can be discarded when the session ends.
+
+### Game mode definitions
+
+- **Turn-based:** the game state changes in discrete turns. Player A makes a move, then player B, then player C, and the sequence continues.
+- **Real-time:** multiple players can act at the same time. The game state updates continuously based on all players' actions, such as ping-pong or Tetris.
+
+Tic-tac-toe is a **turn-based-only** game. Live synchronization between browsers does not make a game real-time; the gameplay rules determine the mode.
 
 ## 2. First release scope
 
@@ -51,7 +58,7 @@ The prototype in `prototype/index.html` is intentionally a single route so the f
 
 ### Create a room
 
-Visitor selects a game → picks `real-time` or `turn-based` → enters a display name (optional, defaults to a playful guest name) → creates room → sees code + share button → waits for another guest → starts when both are ready.
+Visitor selects a game → sees or selects one of that game's supported modes → enters a display name (optional, defaults to a playful guest name) → creates room → sees code + share button → waits for another guest → starts when both are ready. Tic-tac-toe always uses `turn-based` mode.
 
 ### Join a room
 
@@ -176,7 +183,7 @@ Tic-tac-toe is the vertical slice: 2 players, 3×3 board, atomic move validation
 ### Phase 0 — experience decision (this prototype)
 
 - Validate visual language, vocabulary, create/join flow and mobile layout.
-- Decide whether the default is `real-time`, `turn-based`, or a visible choice.
+- Define the mode vocabulary and make each game advertise its supported modes accurately.
 
 ### Phase 1 — vertical slice
 

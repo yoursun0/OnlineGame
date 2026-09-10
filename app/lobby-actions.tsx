@@ -19,7 +19,6 @@ async function callRoomApi(path: string, body: unknown) {
 export function CreateRoomButton() {
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [mode, setMode] = useState<'realtime' | 'turn_based'>('realtime');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +26,7 @@ export function CreateRoomButton() {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      const result = await callRoomApi('/api/rooms', { gameSlug: 'tic-tac-toe', mode, displayName: displayName || 'Guest' });
+      const result = await callRoomApi('/api/rooms', { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: displayName || 'Guest' });
       window.location.assign(`/room/${result.code}`);
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Could not create room.'); setBusy(false); }
   }
@@ -35,7 +34,7 @@ export function CreateRoomButton() {
   if (!open) return <button className="card-cta card-cta-button" type="button" onClick={() => setOpen(true)}>Create a room <span>→</span></button>;
   return <form className="room-form" onSubmit={createRoom}>
     <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder="Guest" /></label>
-    <label><span>Mode</span><select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)}><option value="realtime">Real-time</option><option value="turn_based">Turn-based</option></select></label>
+    <label><span>Mode</span><select value="turn_based" disabled><option value="turn_based">Turn-based</option></select></label>
     {error && <p className="form-error">{error}</p>}
     <button className="button button-dark form-submit" disabled={busy} type="submit">{busy ? 'Creating…' : 'Create room →'}</button>
   </form>;

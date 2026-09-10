@@ -39,7 +39,7 @@ export const GAME_CATALOG: readonly GameCatalogEntry[] = [
     roomPrefix: 'TIK',
     players: { min: 2, max: 2 },
     estimatedMinutes: 5,
-    supports: ['realtime', 'turn_based'],
+    supports: ['turn_based'],
     available: true,
   },
 ];

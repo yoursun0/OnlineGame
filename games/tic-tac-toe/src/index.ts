@@ -14,7 +14,7 @@ export const ticTacToe: GameAdapter<TicTacToeState, TicTacToeMove> = {
   title: 'Tic-tac-toe',
   roomPrefix: 'TIK',
   players: { min: 2, max: 2 },
-  supports: ['realtime', 'turn_based'],
+  supports: ['turn_based'],
   createInitialState: () => ({ board: Array(9).fill(null), nextMark: 'X', moveCount: 0 }),
   validateMove: (state, move, actor: Guest) => {
     if (state.moveCount >= 9 || getWinner(state.board)) return { ok: false, reason: 'Game is over.' };
