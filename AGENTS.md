@@ -29,7 +29,7 @@ Completion means the requested files are updated, the relevant check passes, and
 - Keep secrets in local or hosted environment variables. Commit `.env.example`, never secret values.
 - Treat Supabase migrations as ordered, reviewable source files. Do not edit an applied migration in place; add a new migration.
 - Keep local development pointed at the development Supabase project or local Supabase instance, never production.
-- The current runnable artifact is `prototype/index.html`; serve it with `uv run python -m http.server 4173 --bind 127.0.0.1` until the production app exists.
+- The production runnable artifact is the Next.js app under `app/`; from the repository root use the development environment and run `bun run dev`. Keep `prototype/index.html` as a disposable visual reference; serve it with `uv run python -m http.server 4173 --bind 127.0.0.1` only when reviewing the original concept.
 - Before installing, launching, or otherwise introducing a new local development or testing tool (for example, Docker Desktop), consult the user and receive explicit approval. Do not run exploratory commands that install or start such tools without that approval.
 - Every time when the AI agent complete any code changes with result verified and end the turn to users. Always commit first locally. No need push to origin unless user approve.
 - When a safe, in-scope task can be completed directly with the available tools, the AI agent must do it instead of asking the user to run routine commands. Ask the user to take over only for required credentials, authentication or consent, browser handoff, or another action that requires their direct control.
