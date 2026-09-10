@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../../_lib/supabase-admin';
+import { logApiFailure, logRoomLifecycle } from '../../../_lib/observability';
 import { getRoomSnapshot } from '../route';
 
 type Params = { params: Promise<{ code: string }> };
@@ -36,6 +37,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       p_payload: { cell: move.cell, mark: state.nextMark },
     });
     if (error) throw error;
+    logRoomLifecycle('move', { roomCode: code.toUpperCase(), guestId: guest.id, version: expectedVersion + 1, status });
     return Response.json(await getRoomSnapshot(code.toUpperCase(), guest.id));
-  } catch (error) { return errorResponse(error); }
+  } catch (error) {
+    logApiFailure('/api/rooms/[code]/move', error);
+    return errorResponse(error);
+  }
 }

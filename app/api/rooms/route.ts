@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../_lib/supabase-admin';
+import { logApiFailure, logRoomLifecycle } from '../_lib/observability';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     const { data: room, error: roomError } = await admin.from('rooms').select('code').eq('id', roomId).single();
     if (roomError) throw roomError;
+    logRoomLifecycle('create', { roomCode: room.code, guestId: guest.id, status: 'open' });
     return Response.json({ code: room.code });
-  } catch (error) { return errorResponse(error); }
+  } catch (error) {
+    logApiFailure('/api/rooms', error);
+    return errorResponse(error);
+  }
 }
