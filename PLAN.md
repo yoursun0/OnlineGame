@@ -1,7 +1,7 @@
 # PLAYROOM — anonymous online game portal
 
 > Working name: **PLAYROOM** / **玩房**  
-> Prototype status: UI + local interaction only. No production data is written.
+> Current status: production Tic-tac-toe vertical slice deployed on Vercel with a separate Supabase production project. `prototype/` remains a disposable visual reference.
 
 ## 1. Product thesis
 
@@ -86,7 +86,7 @@ The suffix should be a short uppercase, human-friendly random token that avoids 
 
 - Vercel for the Next.js web app and server actions/API routes.
 - Supabase Postgres for room/game state.
-- Supabase Realtime Broadcast/Presence for low-latency presence and move events.
+- Supabase client plus canonical snapshot recovery for the current release. Realtime Broadcast/Presence remains an optional future optimization, never the source of truth.
 - Supabase Edge Functions or Vercel Route Handlers for authoritative commands, rate limiting and cleanup jobs.
 - Keep `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` in Vercel environment variables; never expose the service role key to the browser.
 

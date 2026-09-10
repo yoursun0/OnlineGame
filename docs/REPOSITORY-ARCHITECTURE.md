@@ -2,7 +2,7 @@
 
 ## Decision
 
-PLAYROOM uses one Git repository with modular game projects. A game is independent at the code, rules, test, and adapter boundaries, but remains in the same repository while the platform and games share the same release and deployment lifecycle.
+PLAYROOM uses one Git repository with modular game projects. A game is independent at the code, rules, test, and adapter boundaries, but remains in the same repository while the platform and games share the same release and deployment lifecycle. The current production entry point is the Next.js app under `app/`; `prototype/` is disposable reference material.
 
 ## Directory map
 
@@ -18,7 +18,7 @@ OnlineGame/
 │   ├── room-protocol/
 │   └── ui/
 ├── supabase/                    # migrations, edge functions, seed data
-├── docs/                        # product, architecture, decisions
+├── docs/                        # product, architecture, operations, ADRs
 ├── prototype/                   # disposable local-only UI prototype
 ├── .agents/skills/              # repository-scoped Codex workflows
 ├── .codex/agents/               # repository-scoped custom subagents
@@ -40,7 +40,7 @@ The platform owns:
 - lobby and catalogue;
 - create/join room flows;
 - guest identity and room membership;
-- persistence, Realtime transport, expiry, and abuse controls;
+- persistence, snapshot recovery transport, expiry, and abuse controls;
 - the common game adapter contract;
 - deployment and environment configuration.
 
