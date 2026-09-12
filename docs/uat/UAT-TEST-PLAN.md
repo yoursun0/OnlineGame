@@ -59,10 +59,10 @@ Temporary rooms expire after six hours of idle activity. Manual UAT rooms are le
 
 | Role | Seat | Browser |
 | --- | --- | --- |
-| Host | Seat 0 / `X` | Context A |
-| Guest | Seat 1 / `O` | Context B (isolated storage) |
+| Host | `X` or `O`, assigned when the room starts | Context A |
+| Guest | The other mark | Context B (isolated storage) |
 
-`X` starts unless a snapshot says otherwise (`games/tic-tac-toe/rules.md`).
+Seat 0 is `X` and seat 1 is `O`. The waiting room still lists the host as seat 0 / `X` until start; start randomly assigns those seats to host and guest. `X` always moves first (`games/tic-tac-toe/rules.md`).
 
 ---
 
@@ -233,7 +233,7 @@ Use two isolated contexts unless the case says otherwise. Record **room code**, 
 | --- | --- | --- |
 | 1 | B: open `/`, guest session ready | Independent guest (different session) |
 | 2 | B: enter A's code + name `Guest-UAT`, Join | Redirect to `/room/{code}` |
-| 3 | A and B | Both lists show 2 / 2 players; seats X and O |
+| 3 | A and B | Both lists show 2 / 2 players; waiting-room seats are still X (host) then O (guest) |
 
 #### TC-UAT-009 — Invalid join code (client)
 
@@ -288,7 +288,7 @@ Use two isolated contexts unless the case says otherwise. Record **room code**, 
 
 | Step | Action | Expected result |
 | --- | --- | --- |
-| 1 | Compare A and B sidebars | Host has `host` / `房主`; names match; seats X then O |
+| 1 | Compare A and B sidebars | Host has `host` / `房主`; names match; waiting-room seats are still X (host) then O (guest) |
 
 #### TC-UAT-014 — Ready and unready
 
@@ -319,7 +319,7 @@ Use two isolated contexts unless the case says otherwise. Record **room code**, 
 
 | Step | Action | Expected result |
 | --- | --- | --- |
-| 1 | Host starts | Both show 3×3 board; heading Turn: X / 輪到: X; status playing |
+| 1 | Host starts | Both show 3×3 board; heading `Turn: X · {name}` / `輪到: X · {name}` for whoever was assigned X; status playing. Host may be X or O. |
 
 ### 6.4 Play (Tic-tac-toe)
 
@@ -338,8 +338,8 @@ Cell map:
 
 | Step | Action | Expected result |
 | --- | --- | --- |
-| 1 | Host (X) plays cell 0 | Cell 0 shows X on **both** boards; turn becomes O |
-| 2 | Guest (O) plays cell 4 | Cell 4 shows O on both; turn X |
+| 1 | The player assigned X plays cell 0 | Cell 0 shows X on **both** boards; turn becomes O |
+| 2 | The player assigned O plays cell 4 | Cell 4 shows O on both; turn X |
 
 #### TC-UAT-018 — Out-of-turn move rejected
 
@@ -367,7 +367,7 @@ Cell map:
 
 | Step | Action | Expected result |
 | --- | --- | --- |
-| 1 | Complete the sequence | Status finished; heading Game complete — final board / 遊戲結束 — 最終棋局 |
+| 1 | Complete the sequence | Status finished; heading `Game complete — X · {name} wins` / `遊戲結束 — X · {name} 獲勝` |
 | 2 | Both browsers | Same X X X top row; cells not playable |
 
 #### TC-UAT-021 — Draw

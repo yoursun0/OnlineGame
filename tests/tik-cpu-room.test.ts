@@ -116,3 +116,31 @@ testWithTimeout('two-player rooms still require both players before starting, th
   expect((await api(`/api/rooms/${secondCode}/move`, oToken, { cell: 0 })).response.status).toBe(409);
   expect((await api(`/api/rooms/${secondCode}/move`, xToken, { cell: 0 })).response.status).toBe(200);
 }, 30000);
+
+testWithTimeout('reading a room finishes a stuck CPU turn', async () => {
+  const host = await createTestUser('heal');
+  const created = await api('/api/rooms', host.token, { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: 'aa' });
+  expect(created.response.status).toBe(200);
+  const code = created.payload?.code as string;
+  roomCodes.push(code);
+  const started = await api(`/api/rooms/${code}`, host.token, { action: 'start' });
+  expect(started.response.status).toBe(200);
+  const roomId = started.payload?.room.id as string;
+  const cpu = started.payload?.members.find((member: { is_cpu?: boolean }) => member.is_cpu);
+  expect(cpu).toBeTruthy();
+
+  await admin.from('game_events').delete().eq('room_id', roomId);
+  await admin.from('room_members').update({ seat: 1 }).eq('room_id', roomId).eq('guest_id', host.id);
+  await admin.from('room_members').update({ seat: 0 }).eq('room_id', roomId).eq('guest_id', cpu.guest_id);
+  await admin.from('rooms').update({
+    state: { board: [null, null, null, null, null, null, null, null, null], nextMark: 'X', moveCount: 0 },
+    version: 0,
+    status: 'playing',
+  }).eq('id', roomId);
+
+  const healed = await api(`/api/rooms/${code}`, host.token);
+  expect(healed.response.status).toBe(200);
+  expect(healed.payload?.room.state.moveCount).toBe(1);
+  expect(healed.payload?.room.state.nextMark).toBe('O');
+  expect(healed.payload?.room.state.board.filter(Boolean)).toEqual(['X']);
+}, 30000);
