@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
+import { connectFour } from '@playroom/connect-four';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
+import { isPlayroomRoomCode } from '../../../room-code';
 
 type Params = { params: Promise<{ code: string }> };
-
-const ROOM_CODE = /^TIK-[2-9A-HJ-NP-Z]{3}$/;
 
 async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) {
   const admin = getAdminClient();
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     const normalizedCode = code.toUpperCase();
-    if (!ROOM_CODE.test(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4 or CON-K8P.', 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const { error: expiryError } = await admin.rpc('expire_idle_rooms', { p_now: new Date().toISOString() });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     normalizedCode = code.toUpperCase();
-    if (!ROOM_CODE.test(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4 or CON-K8P.', 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean };
@@ -88,10 +88,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       logRoomLifecycle('report', { roomCode: normalizedCode, guestId: guest.id });
     } else if (body.action === 'replay') {
       await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
+      const current = await getRoomSnapshot(normalizedCode, guest.id);
+      const initialState = current.room.game_slug === 'connect-four' ? connectFour.createInitialState() : ticTacToe.createInitialState();
       const { error } = await admin.rpc('replay_room_for_guest', {
         p_code: normalizedCode,
         p_guest_id: guest.id,
-        p_state: ticTacToe.createInitialState(),
+        p_state: initialState,
       });
       if (error) throw error;
       logRoomLifecycle('replay', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });

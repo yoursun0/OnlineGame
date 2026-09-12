@@ -69,26 +69,25 @@ export default function HomePage() {
       <section className="catalogue" id="games" aria-labelledby="games-title">
         <div className="section-heading"><div><p className="eyebrow">{text.shelfEyebrow}</p><h2 id="games-title">{text.shelfTitle}</h2></div><span className="shelf-count">{text.shelfNote}</span></div>
         <div className="game-grid">
-          {GAME_CATALOG.map((game) => (
-            <article className="game-card game-card-featured" key={game.slug}>
-              <div className="card-topline"><span className="game-prefix">{game.roomPrefix} · {game.players.min} {text.players} · {game.estimatedMinutes} {text.minutes}</span><span className="status-dot">{text.ready}</span></div>
-              <div className="game-icon" aria-hidden="true">✕◯</div>
-              <div className="card-content"><h3>{language === 'en' ? game.title : '井字過三關'}</h3><p>{text.ticDescription}</p></div>
-              <div className="game-bottom"><span>{text.turnBased}</span><span>{text.ready}</span></div><CreateRoomButton />
-            </article>
-          ))}
+          {GAME_CATALOG.map((game) => {
+            const isConnect = game.slug === 'connect-four';
+            const title = language === 'en' ? game.title : isConnect ? '四子棋' : '井字過三關';
+            return (
+              <article className={`game-card ${isConnect ? 'game-card-connect' : 'game-card-featured'}`} key={game.slug}>
+                <div className="card-topline"><span className="game-prefix">{game.roomPrefix} · {game.players.min} {text.players} · {game.estimatedMinutes} {text.minutes}</span><span className="status-dot">{text.ready}</span></div>
+                <div className="game-icon" aria-hidden="true">{isConnect ? '⬤⬤' : '✕◯'}</div>
+                <div className="card-content"><h3>{title}</h3><p>{isConnect ? text.connectDescription : text.ticDescription}</p></div>
+                <div className="game-bottom"><span>{text.turnBased}</span><span>{text.ready}</span></div><CreateRoomButton gameSlug={game.slug} />
+              </article>
+            );
+          })}
           <article className="game-card game-card-stairs" aria-disabled="true">
             <div className="card-topline"><span className="game-prefix">LAD · 2–4 {text.players} · 5–10 {text.minutes}</span><span className="status-muted">{text.soon}</span></div>
             <div className="game-icon" aria-hidden="true">⇧</div>
             <div className="card-content"><h3>小朋友落樓梯</h3><p>{text.stairsDescription}</p></div>
             <div className="game-bottom"><span>{text.turnBased}</span><span>{text.workshop}</span></div>
           </article>
-          <article className="game-card game-card-coming" aria-disabled="true">
-            <div className="card-topline"><span className="game-prefix">CON · 2 {text.players}</span><span className="status-muted">{text.soon}</span></div>
-            <div className="game-icon" aria-hidden="true">▦</div>
-            <div className="card-content"><h3>{text.connectTitle}</h3><p>{text.connectDescription}</p></div>
-            <div className="game-bottom"><span>{text.turnBased}</span><span>{text.wishlist}</span></div>
-          </article>
+
         </div>
       </section>
 

@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { connectFour, type ConnectFourState } from '@playroom/connect-four';
 import { ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../../_lib/observability';
@@ -12,9 +13,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { code } = await params;
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const body = await readJson(request, 1024) as { cell?: number; expectedVersion?: number };
-    const cell = body.cell;
-    if (typeof cell !== 'number' || !Number.isInteger(cell) || cell < 0 || cell > 8) throw new ApiError('Choose a valid board cell.', 400);
+    const body = await readJson(request, 1024) as { cell?: number; column?: number; expectedVersion?: number };
     await enforceRateLimit(admin, guest.id, 'move', getClientIpHash(request), 12, 10);
     const { room, members } = await getRoomSnapshot(code.toUpperCase(), guest.id);
     const expectedVersion = body.expectedVersion ?? room.version;
@@ -22,12 +21,36 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (room.status !== 'playing') throw new Error('The game has not started or is already finished.');
     const member = members.find((candidate) => candidate.guest_id === guest.id);
     if (!member) throw new Error('You are not a member of this room.');
-    const state = room.state as TicTacToeState;
-    const move = { cell };
-    const validation = ticTacToe.validateMove(state, move, { id: guest.id, seat: member.seat ?? undefined });
-    if (!validation.ok) throw new Error(validation.reason);
-    const nextState = ticTacToe.applyMove(state, move, { id: guest.id, seat: member.seat ?? undefined });
-    const status = ticTacToe.getStatus(nextState);
+    const actor = { id: guest.id, seat: member.seat ?? undefined };
+
+    let nextState: ConnectFourState | TicTacToeState;
+    let status: 'playing' | 'won' | 'draw';
+    let payload: Record<string, unknown>;
+
+    if (room.game_slug === 'connect-four') {
+      const column = body.column;
+      if (typeof column !== 'number' || !Number.isInteger(column) || column < 0 || column > 6) throw new ApiError('Choose a valid column.', 400);
+      const state = room.state as ConnectFourState;
+      const move = { column };
+      const validation = connectFour.validateMove(state, move, actor);
+      if (!validation.ok) throw new Error(validation.reason);
+      const applied = connectFour.applyMove(state, move, actor);
+      nextState = applied;
+      status = connectFour.getStatus(applied);
+      payload = { column: move.column, color: state.nextColor };
+    } else {
+      const cell = body.cell;
+      if (typeof cell !== 'number' || !Number.isInteger(cell) || cell < 0 || cell > 8) throw new ApiError('Choose a valid board cell.', 400);
+      const state = room.state as TicTacToeState;
+      const move = { cell };
+      const validation = ticTacToe.validateMove(state, move, actor);
+      if (!validation.ok) throw new Error(validation.reason);
+      const applied = ticTacToe.applyMove(state, move, actor);
+      nextState = applied;
+      status = ticTacToe.getStatus(applied);
+      payload = { cell: move.cell, mark: state.nextMark };
+    }
+
     const { error } = await admin.rpc('append_game_event', {
       p_room_id: room.id,
       p_guest_id: guest.id,
@@ -35,7 +58,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       p_state: nextState,
       p_status: status === 'playing' ? 'playing' : 'finished',
       p_event_type: 'move',
-      p_payload: { cell: move.cell, mark: state.nextMark },
+      p_payload: payload,
     });
     if (error) throw error;
     logRoomLifecycle('move', { roomCode: code.toUpperCase(), guestId: guest.id, version: expectedVersion + 1, status });

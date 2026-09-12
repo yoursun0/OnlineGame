@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const body = await readJson(request) as { gameSlug?: string; mode?: string; displayName?: string };
-    if (body.gameSlug !== 'tic-tac-toe') throw new Error('Only Tic-tac-toe rooms are available.');
-    if (body.mode !== 'turn_based') throw new ApiError('Tic-tac-toe is turn-based only.', 400);
+    if (body.gameSlug !== 'tic-tac-toe' && body.gameSlug !== 'connect-four') throw new Error('That game is not available.');
+    if (body.mode !== 'turn_based') throw new ApiError(body.gameSlug === 'connect-four' ? 'Connect Four is turn-based only.' : 'Tic-tac-toe is turn-based only.', 400);
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
     if (displayName.length > 32) throw new ApiError('Display name must be 32 characters or fewer.', 400);
     await enforceRateLimit(admin, guest.id, 'create-room', getClientIpHash(request), 5, 60);
