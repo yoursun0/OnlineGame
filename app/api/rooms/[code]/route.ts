@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
+import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -34,7 +35,12 @@ export async function GET(request: NextRequest, { params }: Params) {
     const sinceRaw = new URL(request.url).searchParams.get('since');
     const sinceVersion = sinceRaw === null ? 0 : Number(sinceRaw);
     if (!Number.isInteger(sinceVersion) || sinceVersion < 0 || sinceVersion > 1000000) throw new ApiError('Invalid event version.', 400);
-    return Response.json(await getRoomSnapshot(normalizedCode, guest.id, sinceVersion));
+    return Response.json(await snapshotAfterCpuTurn(
+      await getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
+      () => getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
+      undefined,
+      normalizedCode,
+    ));
   } catch (error) {
     logApiFailure('/api/rooms/[code]', error);
     return errorResponse(error);
@@ -92,7 +98,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else {
       throw new Error('Unknown room action.');
     }
-    return Response.json(await getRoomSnapshot(normalizedCode, guest.id));
+    return Response.json(await snapshotAfterCpuTurn(
+      await getRoomSnapshot(normalizedCode!, guest.id),
+      () => getRoomSnapshot(normalizedCode!, guest.id),
+      undefined,
+      normalizedCode,
+    ));
   } catch (error) {
     logApiFailure(`/api/rooms/[code]#${action}`, error, normalizedCode);
     return errorResponse(error);

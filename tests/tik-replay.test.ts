@@ -29,7 +29,7 @@ async function createTestUser(label: string) {
   userIds.push(created.data.user.id);
   const signedIn = await anon.auth.signInWithPassword({ email, password });
   if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error('Could not sign in test user.');
-  return { token: signedIn.data.session.access_token };
+  return { id: created.data.user.id, token: signedIn.data.session.access_token };
 }
 
 async function api(path: string, token: string, body?: unknown) {
@@ -60,15 +60,20 @@ testWithTimeout('finished Tic-tac-toe rooms can replay with the same seats and a
   expect((await api(`/api/rooms/${code}`, guest.token, { action: 'join', displayName: 'gg' })).response.status).toBe(200);
   expect((await api(`/api/rooms/${code}`, host.token, { action: 'ready', ready: true })).response.status).toBe(200);
   expect((await api(`/api/rooms/${code}`, guest.token, { action: 'ready', ready: true })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}`, host.token, { action: 'start' })).response.status).toBe(200);
+  const started = await api(`/api/rooms/${code}`, host.token, { action: 'start' });
+  expect(started.response.status).toBe(200);
+  const x = started.payload?.members.find((member: { seat: number }) => member.seat === 0);
+  const o = started.payload?.members.find((member: { seat: number }) => member.seat === 1);
+  const xToken = x.guest_id === host.id ? host.token : guest.token;
+  const oToken = o.guest_id === host.id ? host.token : guest.token;
 
   expect((await api(`/api/rooms/${code}`, host.token, { action: 'replay' })).response.status).toBe(409);
 
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 0 })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, guest.token, { cell: 3 })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 1 })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, guest.token, { cell: 4 })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 2 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 0 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, oToken, { cell: 3 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 1 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, oToken, { cell: 4 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 2 })).response.status).toBe(200);
 
   const finished = await api(`/api/rooms/${code}`, host.token);
   expect(finished.payload?.room.status).toBe('finished');
@@ -79,8 +84,8 @@ testWithTimeout('finished Tic-tac-toe rooms can replay with the same seats and a
   expect(replayed.payload?.room.status).toBe('playing');
   expect(replayed.payload?.room.version).toBe(finishedVersion + 1);
   expect(replayed.payload?.room.state).toEqual({ board: [null, null, null, null, null, null, null, null, null], nextMark: 'X', moveCount: 0 });
-  expect(replayed.payload?.members.map((member: { display_name: string; seat: number }) => [member.seat, member.display_name])).toEqual([[0, 'aa'], [1, 'gg']]);
+  expect(replayed.payload?.members.map((member: { display_name: string; seat: number }) => [member.seat, member.display_name])).toEqual(started.payload?.members.map((member: { display_name: string; seat: number }) => [member.seat, member.display_name]));
   expect((replayed.payload?.events ?? []).some((event: { event_type: string }) => event.event_type === 'replay')).toBe(true);
 
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 4 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 4 })).response.status).toBe(200);
 }, 30000);

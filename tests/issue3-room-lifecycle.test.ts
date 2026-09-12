@@ -71,14 +71,19 @@ testWithTimeout('Issue #3 recovery, lifecycle, abuse controls, and anonymous rep
 
   expect((await api(`/api/rooms/${code}`, host.token, { action: 'ready', ready: true })).response.status).toBe(200);
   expect((await api(`/api/rooms/${code}`, guest.token, { action: 'ready', ready: true })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}`, host.token, { action: 'start' })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 0 })).response.status).toBe(200);
-  expect((await api(`/api/rooms/${code}/move`, host.token, { cell: 1, expectedVersion: 0 })).response.status).toBe(409);
+  const started = await api(`/api/rooms/${code}`, host.token, { action: 'start' });
+  expect(started.response.status).toBe(200);
+  const x = started.payload?.members.find((member: { seat: number }) => member.seat === 0);
+  const o = started.payload?.members.find((member: { seat: number }) => member.seat === 1);
+  const xToken = x.guest_id === host.id ? host.token : guest.token;
+  const oToken = o.guest_id === host.id ? host.token : guest.token;
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 0 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, xToken, { cell: 1, expectedVersion: 0 })).response.status).toBe(409);
   const afterFirstMove = await api(`/api/rooms/${code}`, guest.token);
   expect(afterFirstMove.response.status).toBe(200);
   expect(afterFirstMove.payload?.room.version).toBe(1);
 
-  expect((await api(`/api/rooms/${code}/move`, guest.token, { cell: 3 })).response.status).toBe(200);
+  expect((await api(`/api/rooms/${code}/move`, oToken, { cell: 3 })).response.status).toBe(200);
   const missed = await api(`/api/rooms/${code}?since=1`, host.token);
   expect(missed.response.status).toBe(200);
   const missedVersions = (missed.payload?.events ?? []).map((event: { version: number }) => event.version);
