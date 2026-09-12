@@ -11,6 +11,7 @@ Current order:
 5. `20260905000302_nonblocking_room_expiry.sql` — `SKIP LOCKED` expiry cleanup.
 6. `20260905000303_optimistic_event_append.sql` — atomic optimistic state/event append.
 7. `20260912000100_room_replay.sql` — same-room rematch RPC after a finished game.
+8. `20260912000200_tic_tac_toe_cpu_and_random_seats.sql` — solo start versus CPU and random X/O seats.
 
 Apply and verify against an explicit target:
 

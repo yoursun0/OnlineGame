@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
+import { applyCpuTurnIfNeeded } from '../../_lib/apply-cpu-turn';
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -68,6 +69,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       logRoomLifecycle('start', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
+      const started = await getRoomSnapshot(normalizedCode, guest.id);
+      await applyCpuTurnIfNeeded(started.room, started.members);
     } else if (body.action === 'leave') {
       const { error } = await admin.rpc('leave_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
@@ -89,6 +92,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       });
       if (error) throw error;
       logRoomLifecycle('replay', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
+      const replayed = await getRoomSnapshot(normalizedCode, guest.id);
+      await applyCpuTurnIfNeeded(replayed.room, replayed.members);
     } else {
       throw new Error('Unknown room action.');
     }
