@@ -212,7 +212,7 @@ h1, h2, h3, p { margin-top: 0; }
   .footer { display: grid; padding-bottom: 24px; }
   .room-header { flex-wrap: wrap; padding: 13px 0; }
   .room-code-badge { order: 3; width: 100%; padding-top: 11px; border-top: 1px solid var(--line); }
-  .room-header-actions .button { display: none; }
+  .room-header-actions .button { display: inline-flex; }
   .room-layout { padding-top: 38px; }
   .room-sidebar { padding: 13px; }
   .player-row { grid-template-columns: 29px 1fr; }
