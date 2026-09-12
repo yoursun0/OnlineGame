@@ -5,6 +5,7 @@ import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-brows
 import type { TicTacToeState } from '@playroom/tic-tac-toe';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
+import { roomHeadline } from '../../room-headline';
 
 type Room = { id: string; code: string; game_slug: string; mode: 'realtime' | 'turn_based'; status: 'open' | 'playing' | 'finished' | 'expired'; host_guest_id: string; state: TicTacToeState; version: number; max_players: number };
 type Member = { guest_id: string; display_name: string; seat: number; is_ready: boolean };
@@ -33,13 +34,13 @@ export function RoomClient({ code }: { code: string }) {
   const hasSnapshotRef = useRef(false);
   const text = language === 'en' ? {
     room: 'Room', back: 'Back to lobby', loading: 'Loading room…', leave: 'Leave room ↗', game: 'Tic-tac-toe', turnBased: 'Turn-based', realTime: 'Real-time',
-    complete: 'Game complete — final board', turn: 'Turn', waitingRoom: 'Waiting room', players: 'Players', of: 'of', host: 'host', ready: 'Ready', waiting: 'Waiting',
-    unready: 'Unready', imReady: 'I’m ready', start: 'Start game →', waitingBoth: 'Waiting for both players', reportRoom: 'Report room',
+    players: 'Players', of: 'of', host: 'host', ready: 'Ready', waiting: 'Waiting',
+    unready: 'Unready', imReady: 'I’m ready', start: 'Start game →', waitingBoth: 'Waiting for both players', replay: 'Replay', reportRoom: 'Report room',
     reportReason: 'Optional reason', reported: 'Reported', report: 'Report', help: 'Share the code with one other player. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗', game: '井字過三關', turnBased: '回合制', realTime: '即時模式',
-    complete: '遊戲結束 — 最終棋局', turn: '輪到', waitingRoom: '等待玩家', players: '玩家', of: '/', host: '房主', ready: '已準備', waiting: '等待中',
-    unready: '取消準備', imReady: '我準備好了', start: '開始遊戲 →', waitingBoth: '等待兩位玩家準備', reportRoom: '舉報房間',
+    players: '玩家', of: '/', host: '房主', ready: '已準備', waiting: '等待中',
+    unready: '取消準備', imReady: '我準備好了', start: '開始遊戲 →', waitingBoth: '等待兩位玩家準備', replay: '重玩一次', reportRoom: '舉報房間',
     reportReason: '可選填原因', reported: '已舉報', report: '舉報', help: '把房號分享給另一位玩家。伺服器會管理房間狀態並核實每一步。',
   };
 
@@ -100,7 +101,9 @@ export function RoomClient({ code }: { code: string }) {
 
   const ownMember = useMemo(() => snapshot?.members.find((member) => member.guest_id === guestId), [snapshot, guestId]);
   const allReady = Boolean(snapshot && snapshot.members.length === snapshot.room.max_players && snapshot.members.every((member) => member.is_ready));
-  const winnerMessage = snapshot?.room.status === 'finished' ? text.complete : snapshot?.room.status === 'playing' ? `${text.turn}: ${snapshot.room.state.nextMark}` : text.waitingRoom;
+  const winnerMessage = snapshot
+    ? roomHeadline({ status: snapshot.room.status, state: snapshot.room.state, members: snapshot.members, language })
+    : '';
 
   if (error && !snapshot) return <main className="room-shell"><div className="room-header"><Brand /><LanguageToggle /></div><div className="room-error"><p className="eyebrow">{text.room} {code}</p><h1>{error}</h1><a className="button button-dark" href="/">{text.back}</a></div></main>;
   if (!snapshot) return <main className="room-shell"><div className="room-header"><Brand /><LanguageToggle /></div><p className="room-loading">{text.loading}</p></main>;
@@ -109,7 +112,7 @@ export function RoomClient({ code }: { code: string }) {
     <header className="room-header"><Brand /><div className="room-code-badge"><span>{text.room}</span><strong>{snapshot.room.code}</strong></div><div className="room-header-actions"><LanguageToggle /><button className="button button-quiet" type="button" onClick={() => void action('leave')}>{text.leave}</button></div></header>
     <section className="room-layout">
       <div className="room-main"><p className="eyebrow">{text.game} / {snapshot.room.mode === 'realtime' ? text.realTime : text.turnBased}</p><h1>{winnerMessage}</h1>{snapshot.room.status === 'playing' || snapshot.room.status === 'finished' ? <Board state={snapshot.room.state} onMove={move} disabled={busy || snapshot.room.status === 'finished'} language={language} /> : <div className="waiting-mark">× ○<br />○ ×</div>}{error && <p className="form-error room-inline-error">{error}</p>}</div>
-      <aside className="room-sidebar"><div className="player-list"><div className="sidebar-label">{text.players} / {snapshot.members.length} {text.of} {snapshot.room.max_players}</div>{snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}`}>{member.seat === 0 ? 'X' : 'O'}</span><span>{member.display_name}{member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !allReady} type="button" onClick={() => void action('start')}>{allReady ? text.start : text.waitingBoth}</button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
+      <aside className="room-sidebar"><div className="player-list"><div className="sidebar-label">{text.players} / {snapshot.members.length} {text.of} {snapshot.room.max_players}</div>{snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}`}>{member.seat === 0 ? 'X' : 'O'}</span><span>{member.display_name}{member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !allReady} type="button" onClick={() => void action('start')}>{allReady ? text.start : text.waitingBoth}</button>}{snapshot.room.status === 'finished' && ownMember && snapshot.members.length === snapshot.room.max_players && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('replay')}>{text.replay} <span>→</span></button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
     </section>
   </main>;
 }

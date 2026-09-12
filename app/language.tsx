@@ -32,6 +32,9 @@ const errorTranslations: Record<string, string> = {
   'Cell must be between 0 and 8.': '棋格位置無效。',
   'Cell is already occupied.': '這個棋格已有棋子。',
   'It is not this player’s turn.': '還未輪到這位玩家。',
+  'Replay is only available after the game ends.': '遊戲結束後才能重玩。',
+  'Both players must still be in the room to replay.': '兩位玩家都還在房間裡才能重玩。',
+  'A replay needs a fresh game state.': '重玩需要新的棋局狀態。',
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
