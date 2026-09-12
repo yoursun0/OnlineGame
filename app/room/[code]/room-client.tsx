@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-browser';
 import type { TicTacToeState } from '@playroom/tic-tac-toe';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
+import { errorAfterSuccessfulRefresh } from '../../room-error-state';
 
 type Room = { id: string; code: string; game_slug: string; mode: 'realtime' | 'turn_based'; status: 'open' | 'playing' | 'finished' | 'expired'; host_guest_id: string; state: TicTacToeState; version: number; max_players: number };
 type Member = { guest_id: string; display_name: string; seat: number; is_ready: boolean };
@@ -29,6 +30,7 @@ export function RoomClient({ code }: { code: string }) {
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const lastVersionRef = useRef(0);
+  const hasSnapshotRef = useRef(false);
   const text = language === 'en' ? {
     room: 'Room', back: 'Back to lobby', loading: 'Loading room…', leave: 'Leave room ↗', game: 'Tic-tac-toe', turnBased: 'Turn-based', realTime: 'Real-time',
     complete: 'Game complete — final board', turn: 'Turn', waitingRoom: 'Waiting room', players: 'Players', of: 'of', host: 'host', ready: 'Ready', waiting: 'Waiting',
@@ -44,8 +46,11 @@ export function RoomClient({ code }: { code: string }) {
   const refresh = useCallback(async () => {
     try {
       const result = await fetchSnapshot(code, lastVersionRef.current);
+      const alreadyHadSnapshot = hasSnapshotRef.current;
       lastVersionRef.current = result.snapshot.room.version;
-      setSnapshot(result.snapshot); setGuestId(result.guestId); setToken(result.token); setError('');
+      hasSnapshotRef.current = true;
+      setSnapshot(result.snapshot); setGuestId(result.guestId); setToken(result.token);
+      setError((current) => errorAfterSuccessfulRefresh(current, alreadyHadSnapshot));
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not load room.', language)); }
   }, [code, language]);
 
