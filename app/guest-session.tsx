@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { ensureGuestSession } from './lib/supabase-browser';
+import { useLanguage } from './language';
 
 type SessionStatus = 'checking' | 'ready' | 'unavailable' | 'error';
 
 export function GuestSession() {
+  const { language } = useLanguage();
   const [status, setStatus] = useState<SessionStatus>('checking');
 
   useEffect(() => {
@@ -19,6 +21,9 @@ export function GuestSession() {
     return () => { active = false; };
   }, []);
 
-  const label = status === 'ready' ? 'guest session ready' : status === 'unavailable' ? 'connect Supabase to play' : status === 'error' ? 'guest session unavailable' : 'starting guest session…';
+  const labels = language === 'en'
+    ? { ready: 'guest session ready', unavailable: 'connect Supabase to play', error: 'guest session unavailable', checking: 'starting guest session…' }
+    : { ready: '訪客工作階段已就緒', unavailable: '連接 Supabase 後即可遊玩', error: '訪客工作階段無法使用', checking: '正在啟動訪客工作階段…' };
+  const label = labels[status];
   return <span className={`session-status session-${status}`} aria-live="polite"><i aria-hidden="true" />{label}</span>;
 }
