@@ -19,6 +19,8 @@ supabase/.branches/
 coverage/
 playwright-report/
 test-results/
+docs/uat/evidence/
+docs/uat/last-run.json
 *.log
 *.tsbuildinfo
 
