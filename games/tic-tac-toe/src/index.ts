@@ -34,7 +34,7 @@ export const ticTacToe: GameAdapter<TicTacToeState, TicTacToeMove> = {
   getStatus: (state) => getWinner(state.board) ? 'won' : state.moveCount === 9 ? 'draw' : 'playing',
 };
 
-function getWinner(board: Array<Mark | null>): Mark | null {
+export function getWinner(board: Array<Mark | null>): Mark | null {
   for (const [a, b, c] of WINNING_LINES) {
     if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
   }

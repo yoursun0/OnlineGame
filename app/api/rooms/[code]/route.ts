@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 
@@ -79,6 +80,15 @@ export async function POST(request: NextRequest, { params }: Params) {
       const { error } = await admin.rpc('report_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id, p_reason: reason });
       if (error) throw error;
       logRoomLifecycle('report', { roomCode: normalizedCode, guestId: guest.id });
+    } else if (body.action === 'replay') {
+      await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
+      const { error } = await admin.rpc('replay_room_for_guest', {
+        p_code: normalizedCode,
+        p_guest_id: guest.id,
+        p_state: ticTacToe.createInitialState(),
+      });
+      if (error) throw error;
+      logRoomLifecycle('replay', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
     } else {
       throw new Error('Unknown room action.');
     }

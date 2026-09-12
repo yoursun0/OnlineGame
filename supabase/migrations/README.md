@@ -10,6 +10,7 @@ Current order:
 4. `20260905000301_fix_move_concurrency.sql` — row-lock move concurrency correction.
 5. `20260905000302_nonblocking_room_expiry.sql` — `SKIP LOCKED` expiry cleanup.
 6. `20260905000303_optimistic_event_append.sql` — atomic optimistic state/event append.
+7. `20260912000100_room_replay.sql` — same-room rematch RPC after a finished game.
 
 Apply and verify against an explicit target:
 

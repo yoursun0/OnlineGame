@@ -24,8 +24,17 @@ export async function getAuthenticatedGuest(request: NextRequest, admin: Supabas
   return data.user;
 }
 
+export function publicErrorMessage(error: unknown, fallback = 'Request failed.') {
+  if (typeof error === 'object' && error && 'message' in error) {
+    const message = (error as { message: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  if (typeof error === 'string' && error.trim()) return error;
+  return fallback;
+}
+
 export function errorResponse(error: unknown, fallback = 'Request failed.') {
-  const message = error instanceof Error ? error.message : fallback;
+  const message = publicErrorMessage(error, fallback);
   const status = error instanceof ApiError
     ? error.status
     : message.includes('required') || message.includes('invalid') || message.includes('expired') ? 401

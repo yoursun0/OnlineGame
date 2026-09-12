@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { ensureGuestSession } from './lib/supabase-browser';
+import { translateError, useLanguage } from './language';
 
 async function callRoomApi(path: string, body: unknown) {
   const guest = await ensureGuestSession();
@@ -17,6 +18,7 @@ async function callRoomApi(path: string, body: unknown) {
 }
 
 export function CreateRoomButton() {
+  const { language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
@@ -26,21 +28,22 @@ export function CreateRoomButton() {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      const result = await callRoomApi('/api/rooms', { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: displayName || 'Guest' });
+      const result = await callRoomApi('/api/rooms', { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${result.code}`);
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Could not create room.'); setBusy(false); }
+    } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not create room.', language)); setBusy(false); }
   }
 
-  if (!open) return <button className="card-cta card-cta-button" type="button" onClick={() => setOpen(true)}>Create a room <span>→</span></button>;
+  if (!open) return <button className="card-cta card-cta-button" type="button" onClick={() => setOpen(true)}>{language === 'en' ? 'Create room' : '建立房間'} <span>→</span></button>;
   return <form className="room-form" onSubmit={createRoom}>
-    <label><span>Display name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder="Guest" /></label>
-    <label><span>Mode</span><select value="turn_based" disabled><option value="turn_based">Turn-based</option></select></label>
+    <label><span>{language === 'en' ? 'Display name' : '顯示名稱'}</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder={language === 'en' ? 'Guest' : '訪客'} /></label>
+    <label><span>{language === 'en' ? 'Mode' : '模式'}</span><select value="turn_based" disabled><option value="turn_based">{language === 'en' ? 'Turn-based' : '回合制'}</option></select></label>
     {error && <p className="form-error">{error}</p>}
-    <button className="button button-dark form-submit" disabled={busy} type="submit">{busy ? 'Creating…' : 'Create room →'}</button>
+    <button className="button button-dark form-submit" disabled={busy} type="submit">{busy ? (language === 'en' ? 'Creating…' : '建立中…') : (language === 'en' ? 'Create room →' : '建立房間 →')}</button>
   </form>;
 }
 
 export function JoinRoomForm() {
+  const { language } = useLanguage();
   const [code, setCode] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
@@ -50,16 +53,16 @@ export function JoinRoomForm() {
     event.preventDefault();
     setBusy(true); setError('');
     const normalized = code.trim().toUpperCase();
-    if (!/^TIK-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) { setError('Use a code like TIK-7Q4.'); setBusy(false); return; }
+    if (!/^TIK-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) { setError(language === 'en' ? 'Use a code like TIK-7Q4.' : '請輸入類似 TIK-7Q4 的房號。'); setBusy(false); return; }
     try {
-      await callRoomApi(`/api/rooms/${normalized}`, { action: 'join', displayName: displayName || 'Guest' });
+      await callRoomApi(`/api/rooms/${normalized}`, { action: 'join', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${normalized}`);
-    } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Could not join room.'); setBusy(false); }
+    } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not join room.', language)); setBusy(false); }
   }
 
   return <form className="join-form join-form-stack" onSubmit={joinRoom}>
-    <div className="join-fields"><label className="sr-only" htmlFor="room-code">Room code</label><input id="room-code" name="room-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="TIK-7Q4" maxLength={7} /><label className="sr-only" htmlFor="join-name">Display name</label><input id="join-name" name="join-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Your name" maxLength={32} /></div>
-    <button className="button button-dark" disabled={busy} type="submit">{busy ? 'Joining…' : 'Join room →'}</button>
+    <div className="join-fields"><label className="sr-only" htmlFor="room-code">{language === 'en' ? 'Room code' : '房號'}</label><input id="room-code" name="room-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="TIK-7Q4" maxLength={7} autoComplete="off" /><label className="sr-only" htmlFor="join-name">{language === 'en' ? 'Display name' : '顯示名稱'}</label><input id="join-name" name="join-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder={language === 'en' ? 'Your name' : '你的名稱'} maxLength={32} /></div>
+    <button className="button button-mint" disabled={busy} type="submit">{busy ? (language === 'en' ? 'Joining…' : '加入中…') : (language === 'en' ? 'Join →' : '入房 →')}</button>
     {error && <p className="form-error">{error}</p>}
   </form>;
 }
