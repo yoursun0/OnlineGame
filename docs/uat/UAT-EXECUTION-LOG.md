@@ -66,7 +66,7 @@ Do not record secrets, tokens, or service-role keys.
 | DEF-UAT-001 | Medium | Out-of-turn move is rejected (HTTP 409) but the room inline error banner is empty. Snapshot refresh likely clears it. Workaround: board does not change. | TC-UAT-018 | Fixed — poll no longer clears action errors |
 | DEF-UAT-002 | Medium | Joining a well-formed unused code (`TIK-9ZZ`) shows generic `Request failed.` instead of “room not found”. Direct `/room/NOT-A-CODE` flashes `Loading room…` before the error page. | TC-UAT-010 | Fixed — PostgREST errors now surface their message |
 | DEF-UAT-003 | Medium | `.room-header-actions .button` is `display: none` under 620px, so Leave is not visible on mobile. Workaround: desktop Leave, or brand link home (does not call leave). | TC-UAT-030 | Fixed — Leave stays visible under 620px |
-| DEF-UAT-004 | Medium | Tic-tac-toe board rows without an X/O mark collapse shorter than rows that have a mark, so the 3×3 grid is uneven. Empty cells have no in-flow height while marked cells grow with `font-size`. | Exploratory / screenshot `TIK-NMX` | Open — does not block go-live |
+| DEF-UAT-004 | Medium | Tic-tac-toe board rows without an X/O mark collapse shorter than rows that have a mark, so the 3×3 grid is uneven. Empty cells have no in-flow height while marked cells grow with `font-size`. | Exploratory / screenshot `TIK-NMX` | Fixed — equal `minmax(0, 1fr)` rows; cells 129×129 with mixed marks |
 
 ## Exploratory notes
 
@@ -86,9 +86,8 @@ Do not record secrets, tokens, or service-role keys.
 
 ## Sign-off
 
-**Recommendation**: GO for this local bilingual Tic-tac-toe slice, with the three Medium defects above tracked.
+**Recommendation**: GO for this local bilingual Tic-tac-toe slice. DEF-UAT-001 through DEF-UAT-004 are fixed.
 
 **Conditions**:
 - Local only; this is not production or Preview sign-off.
-- DEF-UAT-001 / 002 / 003 do not block; fix when touching room errors or mobile chrome.
 - Re-run `docs/uat/run_local_uat.py` against Preview before promoting.
