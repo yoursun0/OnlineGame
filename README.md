@@ -1,6 +1,6 @@
 # PLAYROOM / 玩房
 
-PLAYROOM is an anonymous multiplayer game portal for short, shareable games. The production vertical slice is a two-player Tic-tac-toe room with a public catalogue, short room codes, guest sessions, server-authoritative moves, reconnect recovery, abuse controls, and Vercel/Supabase deployment.
+PLAYROOM is an anonymous multiplayer game portal for short, shareable games. The production vertical slice is a two-player Tic-tac-toe room with a public catalogue, short room codes, guest sessions, server-authoritative moves, reconnect recovery, abuse controls, and Vercel/Supabase deployment. Connect Four / 四子棋 uses the same room flow with `CON-` codes once its migration is applied.
 
 Production: [online-game-helic.vercel.app](https://online-game-helic.vercel.app/)
 
@@ -11,7 +11,7 @@ Production: [online-game-helic.vercel.app](https://online-game-helic.vercel.app/
 | Web framework | Next.js 16 App Router | Pages, route handlers, metadata, deployment entry point |
 | Language | TypeScript 7 | Application and shared contracts |
 | Runtime/package manager | Bun 1.x | Install, scripts, tests, and Vercel builds |
-| UI | React 19 + CSS | Lobby, room, and Tic-tac-toe client UI |
+| UI | React 19 + CSS | Lobby, room, Tic-tac-toe, and Connect Four client UI |
 | API | Next.js Route Handlers | Authenticated room commands and snapshots |
 | Database/auth | Supabase Postgres + Supabase Auth | Durable room state, event history, anonymous guest sessions |
 | Transport | Supabase client and database polling/recovery | Guest auth and canonical room snapshots |
@@ -95,7 +95,7 @@ Do not paste credentials, tokens, service-role keys, or database passwords into 
 ## Application behavior
 
 1. A browser creates or resumes a Supabase anonymous guest session.
-2. The lobby calls `POST /api/rooms` to create a `TIK-XXX` room.
+2. The lobby calls `POST /api/rooms` to create a `TIK-XXX` or `CON-XXX` room.
 3. A second guest joins with `POST /api/rooms/[code]` and the room becomes ready when both players are ready.
 4. The host starts the room. Every move goes through `POST /api/rooms/[code]/move`.
 5. Route handlers authenticate the bearer token, validate the move against the game adapter, and persist the canonical state/event with an optimistic version check.
@@ -107,7 +107,7 @@ API surface:
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/rooms` | Create a Tic-tac-toe room |
+| `POST` | `/api/rooms` | Create a Tic-tac-toe or Connect Four room |
 | `GET` | `/api/rooms/[code]` | Read a member's canonical snapshot; supports `?since=<version>` |
 | `POST` | `/api/rooms/[code]` | Join, ready/unready, start, leave, or report |
 | `POST` | `/api/rooms/[code]/move` | Validate and append one game move |
@@ -192,6 +192,7 @@ Guest IDs are hashed with `RATE_LIMIT_SALT`; display names, report text, IP addr
 - [Architecture decision records](docs/adr/README.md)
 - [Migration notes](supabase/migrations/README.md)
 - [Tic-tac-toe rules](games/tic-tac-toe/rules.md)
+- [Connect Four rules](games/connect-four/rules.md)
 
 ## Change and release rules
 

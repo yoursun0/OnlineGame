@@ -42,4 +42,14 @@ export const GAME_CATALOG: readonly GameCatalogEntry[] = [
     supports: ['turn_based'],
     available: true,
   },
+  {
+    slug: 'connect-four',
+    title: 'Connect Four',
+    shortDescription: 'Four pieces, one clean line, and just enough room for a trap.',
+    roomPrefix: 'CON',
+    players: { min: 2, max: 2 },
+    estimatedMinutes: 8,
+    supports: ['turn_based'],
+    available: true,
+  },
 ];

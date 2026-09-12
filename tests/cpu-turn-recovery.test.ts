@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { snapshotAfterCpuTurn, type CpuMember, type CpuRoom } from '../app/api/_lib/apply-cpu-turn';
-import { ticTacToe } from '@playroom/tic-tac-toe';
+import { ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 
 const cpu: CpuMember = { guest_id: 'cpu', seat: 0, is_cpu: true };
 const host: CpuMember = { guest_id: 'host', seat: 1, is_cpu: false };
@@ -33,7 +33,7 @@ test('a failed CPU append still returns the reloaded human snapshot', async () =
 test('a successful CPU append returns the reloaded snapshot', async () => {
   const reloaded = {
     ...pending,
-    room: { ...pending.room, version: 1, state: ticTacToe.applyMove(pending.room.state, { cell: 0 }, { id: 'cpu' }) },
+    room: { ...pending.room, version: 1, state: ticTacToe.applyMove(pending.room.state as TicTacToeState, { cell: 0 }, { id: 'cpu' }) },
   };
   let applied = false;
   const result = await snapshotAfterCpuTurn(pending, async () => reloaded, async () => {

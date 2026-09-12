@@ -17,7 +17,7 @@ async function callRoomApi(path: string, body: unknown) {
   return payload as { code: string };
 }
 
-export function CreateRoomButton() {
+export function CreateRoomButton({ gameSlug }: { gameSlug: string }) {
   const { language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -28,7 +28,7 @@ export function CreateRoomButton() {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      const result = await callRoomApi('/api/rooms', { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
+      const result = await callRoomApi('/api/rooms', { gameSlug, mode: 'turn_based', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${result.code}`);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not create room.', language)); setBusy(false); }
   }
@@ -53,7 +53,7 @@ export function JoinRoomForm() {
     event.preventDefault();
     setBusy(true); setError('');
     const normalized = code.trim().toUpperCase();
-    if (!/^TIK-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) { setError(language === 'en' ? 'Use a code like TIK-7Q4.' : '請輸入類似 TIK-7Q4 的房號。'); setBusy(false); return; }
+    if (!/^(TIK|CON)-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) { setError(language === 'en' ? 'Use a code like TIK-7Q4 or CON-K8P.' : '請輸入類似 TIK-7Q4 或 CON-K8P 的房號。'); setBusy(false); return; }
     try {
       await callRoomApi(`/api/rooms/${normalized}`, { action: 'join', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${normalized}`);

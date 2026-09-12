@@ -12,6 +12,7 @@ Current order:
 6. `20260905000303_optimistic_event_append.sql` — atomic optimistic state/event append.
 7. `20260912000100_room_replay.sql` — same-room rematch RPC after a finished game.
 8. `20260912000200_tic_tac_toe_cpu_and_random_seats.sql` — solo start versus CPU and random X/O seats.
+9. `20260912000300_connect_four_rooms.sql` — allow Connect Four rooms with `CON-` codes and a 6×7 initial board.
 
 Apply and verify against an explicit target:
 

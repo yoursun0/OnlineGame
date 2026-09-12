@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { connectFour } from '@playroom/connect-four';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { roomHeadline } from '../app/room-headline';
 
@@ -33,4 +34,21 @@ test('a win names the winning guest and mark', () => {
   expect(ticTacToe.getStatus(state)).toBe('won');
   expect(roomHeadline({ status: 'finished', state, members, language: 'en' })).toBe('Game complete — X · aa wins');
   expect(roomHeadline({ status: 'finished', state, members, language: 'zh-Hant' })).toBe('遊戲結束 — X · aa 獲勝');
+});
+
+test('a playing Connect Four room names the guest whose color is next', () => {
+  const state = connectFour.createInitialState();
+  expect(roomHeadline({ status: 'playing', state, members, language: 'en', gameSlug: 'connect-four' })).toBe('Turn: Red · aa');
+  expect(roomHeadline({ status: 'playing', state, members, language: 'zh-Hant', gameSlug: 'connect-four' })).toBe('輪到: 紅 · aa');
+});
+
+test('a Connect Four win names the winning guest and color', () => {
+  let state = connectFour.createInitialState();
+  for (const column of [0, 0, 1, 1, 2, 2, 3]) {
+    const seat = state.nextColor === 'red' ? 0 : 1;
+    state = connectFour.applyMove(state, { column }, { id: 'p', seat });
+  }
+  expect(connectFour.getStatus(state)).toBe('won');
+  expect(roomHeadline({ status: 'finished', state, members, language: 'en', gameSlug: 'connect-four' })).toBe('Game complete — Red · aa wins');
+  expect(roomHeadline({ status: 'finished', state, members, language: 'zh-Hant', gameSlug: 'connect-four' })).toBe('遊戲結束 — 紅 · aa 獲勝');
 });

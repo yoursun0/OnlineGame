@@ -1,7 +1,7 @@
 # PLAYROOM — anonymous online game portal
 
 > Working name: **PLAYROOM** / **玩房**  
-> Current status: production Tic-tac-toe vertical slice deployed on Vercel with a separate Supabase production project. `prototype/` remains a disposable visual reference.
+> Current status: production Tic-tac-toe vertical slice deployed on Vercel with a separate Supabase production project. Connect Four / 四子棋 is implemented in-repo (`CON-` rooms, CPU or human opponent) and needs the Connect Four migration on each target before it can be created. `prototype/` remains a disposable visual reference.
 
 ## 1. Product thesis
 

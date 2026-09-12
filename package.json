@@ -22,6 +22,7 @@
     "vercel": "^59.11.7"
   },
   "dependencies": {
+    "@playroom/connect-four": "workspace:*",
     "@playroom/game-core": "workspace:*",
     "@playroom/tic-tac-toe": "workspace:*",
     "@supabase/supabase-js": "^2.115.0",
