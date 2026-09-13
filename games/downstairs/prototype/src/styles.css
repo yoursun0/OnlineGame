@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a2748;
+  --color-surface: #0c3258;
+  --color-surface-2: #164a78;
+  --color-fg: #d6eefc;
+  --color-muted: #8eb8d4;
+  --color-subtle: #5e8aaa;
+  --color-border: #4a8ab0;
+  --color-accent: #7ec8e8;
+  --color-accent-fg: #062036;
+  --color-danger: #d45a4c;
+  --color-p1: #e0b03a;
+  --color-p2: #3db346;
+  --color-p3: #e24b4b;
+  --color-p4: #a85be8;
+  --color-hp: #3ec86a;
+  --font-sans: "PingFang TC", "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    min-height: 100%;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
