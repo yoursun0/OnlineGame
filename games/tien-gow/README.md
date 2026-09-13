@@ -4,9 +4,8 @@
 - Room prefix: `TGW`
 - Players: 4, empty seats filled with CPU
 - Mode: turn-based only
-- Status: spec only. No production module yet.
+- Status: spec. Engine and lab UI not implemented.
 
-Source of truth for play: `rules.md` (Helic table).
-Engineering contract: `SPEC.md`.
-Local prototype design: `PROTOTYPE.md`.
-Terms: `CONTEXT.md`.
+`rules.md` — play.
+`SPEC.md` — TDD implementation.
+`CONTEXT.md` — terms.

@@ -1,28 +1,27 @@
-# 打天九 engineering spec
+# 打天九 implementation
 
-Spec only. No game code in this change. Later coding sessions implement this file and `rules.md`.
+Coding-agent contract. Play is `rules.md`. Terms are `CONTEXT.md`.
+
+Implement with TDD. One slice at a time: write failing `bun test` files, then production code until green. Do not start slice N+1 while N is red. Do not add PLAYROOM rooms, migrations, or catalogue in slices 1–9.
 
 ## Outcome
 
-A `games/tien-gow` module that:
+`@playroom/tien-gow` reducer + CPU, playable at `/lab/tien-gow` as 1 human + 3 CPU, in memory, no Supabase. Same reducer later serves `TGW` rooms.
 
-1. Implements the Helic table in `rules.md` behind `GameAdapter` from day one
-2. Is playable locally as 1 human + 3 CPU without a network
-3. Later wires into PLAYROOM rooms as `TGW-xxx` with mixed humans and CPU
+## Layout
 
-## Non-goals
+```text
+games/tien-gow/src/
+  tiles.ts combinations.ts table.ts deal.ts
+  examples.ts scoring.ts reducer.ts view.ts cpu.ts adapter.ts
+  index.ts
+games/tien-gow/tests/*.test.ts
+app/lab/tien-gow/          slice 9 only
+```
 
-- Money, stakes, or gambling
-- 推牌九
-- 小天九 (4 tiles)
-- 輪莊
-- A throwaway HTML/Vite prototype
-- Implementing 牌頭 as fairness mechanics
-- Deep CPU search
+No nested Vite/HTML app.
 
-## Adapter
-
-Keep the shared `GameAdapter` shape. Extend the module with helpers the current 2-player games do not need. Do not require every PLAYROOM game to grow these helpers until 打天九 lands.
+## Types
 
 ```ts
 type Table = {
@@ -38,79 +37,139 @@ type Table = {
   extraExamples: boolean;
 };
 
-type TienGowMove =
-  | { type: 'setTable'; table: Table }
+type Move =
+  | { type: 'lead' | 'beat' | 'dump'; tiles: TileId[] }
   | { type: 'claimExample' }
-  | { type: 'skipExample' }
-  | { type: 'lead'; tiles: TileId[] }
-  | { type: 'beat'; tiles: TileId[] }
-  | { type: 'dump'; tiles: TileId[] };
+  | { type: 'skipExample' };
 
-createInitialState(input: { seed: string; table: Table; bankerSeat: 0|1|2|3 }): State
-validateMove(state, move, actor)
-applyMove(state, move, actor)
-projectView(state, seat): PublicView  // never leak other hands or dump faces
-getHandStatus(state): 'dealing' | 'examples' | 'trick' | 'settled'
-nextCpuMove(state, seat): TienGowMove | null
+createHand({ seed, table, bankerSeat, chips }): State
+validateMove(state, move, actor): { ok: true } | { ok: false; reason: string }
+applyMove(state, move, actor): State
+listLegalMoves(state, seat): Move[]
+projectView(state, seat): View   // own hand; dump counts not faces
+nextCpuMove(state, seat): Move | null
 ```
 
-`createInitialState()` on the shared adapter may take no args today. The module exports a seeded factory. Platform start-room later calls that factory with server RNG.
+Default `Table`: every option on except `baoHonorAlsoHe` and `extraExamples`.
 
-`getStatus(): playing | won | draw` is too small. Map a settled hand to `playing` while chips remain and the room is open; map only an explicit room-end to `finished`. Do not finish the room after one hand.
+`GameAdapter.createInitialState()` wraps `createHand` with a seed. Room status stays `playing` across hands; do not finish the room on 結.
 
-## Hidden information
+Canonical state holds all hands. Lab and later GET snapshots send `projectView(actor)` only. Lab `?god=1` may show all hands; default off.
 
-Canonical state holds all hands and dump faces.
+## CPU
 
-`projectView(seat)` returns:
+Pick from `listLegalMoves` only, deterministic.
 
-- own hand
-- own 棟 count and public 棟 counts
-- current face-up combination
-- dump counts, not dump faces
-- whose turn
-- Table, 莊, 莊 tenure, chips
-- last public recap after 結, including revealed dumps
+1. 例牌 claim if this seat wins the window
+2. On lead: 武尊, then 文尊, then 四文武
+3. 擒文尊 if current combo is 文尊 and seat holds 孖高腳
+4. Beat to 結 when eligible
+5. Cheapest legal beat
+6. Dump junk
 
-Online snapshots must send `projectView(actor)`, never the canonical state.
+No search.
 
-## CPU and seats
+## Lab (slice 9)
 
-- `max_players = 4`
-- Host may start with 1-4 humans. Remaining seats are CPU
-- Several CPU occupants are allowed. Current `members.find(is_cpu)` is insufficient
-- CPU uses the locked Table
-- Local prototype: one human at a seat, three CPU, same reducer as online
+`/lab/tien-gow` is not in the catalogue. No guest session.
 
-## Platform gaps (later, not the first coding session)
+- Human seat 0, CPU 1–3, first 莊 = 0, then 飛莊
+- Table checkboxes; `captureWenHonor` disabled unless `wenHonor`
+- CSS pip tiles (red 1/4)
+- Combination picker from selected tiles
+- Public log; 賀 toast; 結 recap
+- After a human move, apply `nextCpuMove` in a loop until the human to play
 
-- Catalog entry, `TGW` prefix, `PLAYROOM_ROOM_CODE`
-- `create_room_for_guest` allows `tien-gow`, `max_players = 4`
-- Start fills empty seats with CPU
-- Move route uses this module, not tic-tac-toe/connect-four branches
-- Private views on GET snapshot
-- Table UI on create/start: checkboxes from `rules.md`
+Rematch: chips 100, same seats and Table.
 
-Playable prototype shape: `PROTOTYPE.md`.
+## Slices
 
-## Implementation slices
+Each slice names the red tests. Fixtures come from `rules.md`.
 
-Later issue breakdown, in this order. Each slice keeps the adapter types complete even if a move type is not yet accepted.
+### 1. Tiles and combinations
 
-1. Tiles, ranks, combination enumerator, tests
-2. Trick reducer: lead, beat, dump, eligibility, 格食格
-3. Ordinary 結 scoring + 莊 multiplier + 入一/入二/空棟
-4. 賀尊, 賀四, 擒文尊
-5. 包尊, 四大包, 么結, 么雙擒四
-6. 七支 / 八支 including 莊 頭牌 not 天/九/至尊
-7. 例牌 window
-8. CPU legal player on the locked Table
-9. Local 1H+3CPU UI using the same reducer
-10. PLAYROOM wiring
+Red: `tests/tiles.test.ts`, `tests/combinations.test.ts`
 
-## Acceptance for the spec itself
+- 32 identities, 文/武 rank, red-pip counts
+- Enumerator emits 文對, 武對, 天九 family, 至尊
+- 文尊 present only if `wenHonor`
+- 地八 does not beat 雜九; 三文 does not beat 三武; equal rank does not beat
 
-- `games/tien-gow/rules.md` can answer a rules question without Wikipedia
-- Helic 今次牌例 is the default Table
-- 文尊 and 擒文尊 are independent options
-- 「不可頓牌」is documented as 莊 八支 頭牌不可用天/九/至尊, not a second rule
+Green: `tiles.ts`, `combinations.ts`, `table.ts`
+
+### 2. Tricks
+
+Red: `tests/tricks.test.ts`
+
+- lead / beat / dump; 墊 always legal
+- 上家 must act before 下家
+- 0 棟 after 7 tiles must dump a singleton last trick
+- last trick of 2+ tiles allows a 0 棟 beat
+
+Green: `deal.ts`, `reducer.ts` (no scoring yet)
+
+### 3. Ordinary 結
+
+Red: `tests/scoring.test.ts`
+
+- 空棟 −5, par 4, 入一 / 入二
+- 初任 ×2; losing 莊 入一 not doubled
+
+Green: `scoring.ts` hooked from reducer
+
+### 4. 賀尊, 賀四, 擒文尊
+
+Red: `tests/honor.test.ts`
+
+- mid-hand 至尊 pays immediately, collector leads
+- 擒文尊 only if both options on
+- `wenHonor` on + `captureWenHonor` off: led 文尊 unbeatable
+- last-trick 至尊 is not 賀
+
+### 5. 包尊, 四大包, 么結, 么雙擒四
+
+Red: `tests/special-settle.test.ts`
+
+- 包尊 ×2, no 賀錢 unless `baoHonorAlsoHe`
+- 四大包 ×4
+- 么雙擒四 coverage and 入一 still on 結
+
+### 6. 七支 / 八支
+
+Red: `tests/slam.test.ts`
+
+- all 8 棟 required
+- forced last singleton is 七支
+- 莊 first lead 天 cannot be 八支
+- empty 5 then slam multiplier
+
+### 7. 例牌
+
+Red: `tests/examples.test.ts`
+
+- four default hands; 莊 priority; immediate 結 with slam
+- `extraExamples` off: 四對子 is not 例牌
+
+### 8. View and CPU
+
+Red: `tests/view.test.ts`, `tests/cpu.test.ts`
+
+- `projectView` omits other hands and dump faces
+- CPU move ∈ `listLegalMoves`
+- frozen hands for priorities 2–6
+
+Green: `view.ts`, `cpu.ts`, `adapter.ts`
+
+### 9. Lab UI
+
+Red: `tests/lab-smoke.test.ts` if a cheap render test exists; otherwise manual: one full hand on defaults.
+
+Green: `app/lab/tien-gow/*` importing the engine. Human cannot see CPU hands.
+
+### 10. Rooms (separate issue)
+
+`TGW` prefix, `max_players = 4`, multi-CPU fill, `projectView` on GET, Table checkboxes on start. Reuse lab board components. Not this issue.
+
+## Done
+
+`bun test` green for slices 1–8. `/lab/tien-gow` plays one hand 1H+3CPU. No `TGW` rooms.
