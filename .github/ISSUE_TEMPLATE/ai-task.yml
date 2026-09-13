@@ -1,0 +1,48 @@
+name: AI Task
+description: Specify a Work Item for AI delivery
+title: "[AI] "
+labels:
+  - ai:spec-draft
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Observable result when this Work Item is complete.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Background, constraints, and relevant repository knowledge.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Numbered, testable criteria that define done for implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: validation-commands
+    attributes:
+      label: Validation commands
+      description: Exact commands the worker must run to prove the change.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Work Items or external conditions that must be satisfied first. Write none if there are no dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: Work that is explicitly out of scope.
+    validations:
+      required: true
