@@ -1,10 +1,9 @@
-# 小朋友落樓梯
+# 小朋友落樓梯 / Downstairs
 
-- Slug: `little-stairs`
+- Slug: `downstairs`
 - Room prefix: `LAD`
-- Players: 2–4
-- Initial mode: turn-based
-- Status: rules discovery placeholder
+- Players: 1–4 (no CPU)
+- Mode: realtime only
+- Status: v1 rules locked; production module not yet wired. Implementation: GitHub issues 9–13.
 
-The game should define its board, dice/randomness authority, movement, collision, and reconnect behavior before implementation.
-
+See `rules.md` and the local `AGENTS.md` before changing the game contract. Feel reference: `prototype/`.

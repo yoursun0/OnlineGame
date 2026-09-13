@@ -1,8 +1,12 @@
-# Little Stairs
+# Downstairs
 
 Real-time arcade 小朋友落樓梯 inside a PLAYROOM `LAD` room. One well per room. The host’s browser simulates play; the server owns the room and checkpoints.
 
 ## Language
+
+**Downstairs**:
+The PLAYROOM game 小朋友落樓梯.
+_Avoid_: little-stairs, dice board, stairs (as the game name)
 
 **Well**:
 The single falling-stairs playfield shared by everyone in one `LAD` room.
