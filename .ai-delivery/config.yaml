@@ -6,8 +6,10 @@ commands:
   install: []
   format: []
   lint: []
-  typecheck: []
-  test: []
+  typecheck:
+    - bun run typecheck
+  test:
+    - bun test
   build: []
 protectedPaths:
   - .github/workflows/**
