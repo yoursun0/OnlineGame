@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectFour, type ConnectFourState } from '@playroom/connect-four';
+import { isWellPlayPayload } from '@playroom/game-core';
 import { ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../../_lib/observability';
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const body = await readJson(request, 1024) as { cell?: number; column?: number; expectedVersion?: number };
+    if (isWellPlayPayload(body)) throw new ApiError('Realtime well traffic does not use the turn-based move path.', 400);
     await enforceRateLimit(admin, guest.id, 'move', getClientIpHash(request), 12, 10);
     const { room, members } = await getRoomSnapshot(code.toUpperCase(), guest.id);
     const expectedVersion = body.expectedVersion ?? room.version;

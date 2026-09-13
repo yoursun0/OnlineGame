@@ -8,6 +8,7 @@ export type MoveResult =
   | { ok: true }
   | { ok: false; reason: string };
 
+/** Turn-based board games. Realtime well traffic is WellIntent / WellSnapshot / WellCheckpoint, not Move. */
 export type GameAdapter<State, Move> = {
   slug: string;
   title: string;
@@ -19,6 +20,30 @@ export type GameAdapter<State, Move> = {
   applyMove(state: State, move: Move, actor: Guest): State;
   getStatus(state: State): GameStatus;
 };
+
+export {
+  WELL_INTENT_DIRECTIONS,
+  WELL_MAX_KIDS,
+  WELL_MIN_KIDS,
+  createWellCheckpoint,
+  createWellIntent,
+  createWellSnapshot,
+  isWellCheckpoint,
+  isWellIntent,
+  isWellPlayPayload,
+  isWellSnapshot,
+} from './well';
+
+export type {
+  WellCheckpoint,
+  WellIntent,
+  WellIntentDirection,
+  WellKid,
+  WellPlayPayload,
+  WellSnapshot,
+  WellStair,
+  WellState,
+} from './well';
 
 export type GameCatalogEntry = {
   slug: string;
