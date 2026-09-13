@@ -4,6 +4,8 @@ PLAYROOM is an anonymous multiplayer game portal for short, shareable games. The
 
 Production: [online-game-helic.vercel.app](https://online-game-helic.vercel.app/)
 
+AFK delivery canary: 2026-09 (ai-delivery-control).
+
 ## Technology stack
 
 | Area | Choice | Responsibility |
