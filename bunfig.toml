@@ -1,6 +1,16 @@
 [test]
 preload = ["./tests/test-preload.ts"]
 timeout = 30000
+# AFK / CI without Supabase secrets: skip disposable prototype and live-room integration suites.
+pathIgnorePatterns = [
+  "**/prototype/**",
+  "tests/con-cpu-room.test.ts",
+  "tests/tik-cpu-room.test.ts",
+  "tests/tik-replay.test.ts",
+  "tests/issue3-room-lifecycle.test.ts",
+  "tests/anonymous-auth.test.ts",
+  "tests/cpu-turn-recovery.test.ts",
+]
 
 [run]
 noOrphans = true
