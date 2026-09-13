@@ -1,0 +1,23 @@
+schemaVersion: 1
+policyVersion: 1
+repository: "yoursun0/OnlineGame"
+defaultBranch: "main"
+commands:
+  install: []
+  format: []
+  lint: []
+  typecheck:
+    - bun run typecheck
+  test:
+    - bun test
+  build: []
+protectedPaths:
+  - .github/workflows/**
+  - .ai-delivery/**
+  - AGENTS.md
+  - "**/migrations/**"
+  - "**/deploy/**"
+mergePolicy:
+  lowRisk: checks-and-agent-review
+  mediumRisk: checks-and-design-review
+  highRisk: human-review

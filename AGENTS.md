@@ -50,3 +50,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+<!-- ai-delivery:start v1 -->
+## AI delivery workflow
+
+When creating, refining, executing, reviewing, or resuming an AI Work Item, read .ai-delivery/README.md and .ai-delivery/config.yaml before acting.
+<!-- ai-delivery:end -->
