@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyMove,
   createHand,
@@ -13,6 +13,7 @@ import {
   type Move,
   type State,
   type Table,
+  type View,
   DEFAULT_TABLE,
   getTile,
 } from '@playroom/tien-gow';
@@ -61,36 +62,70 @@ function cpuDelay(state: State): number {
   return CPU_PLAY_MS;
 }
 
+function trickAfterFourth(from: State, move: Move, seat: number): View['trick'] | null {
+  const trick = projectView(from, 0).trick;
+  if (!trick || trick.plays.length !== 3) return null;
+  if (move.type === 'dump') {
+    return { ...trick, plays: [...trick.plays, { seat, type: 'dump', count: move.tiles.length }] };
+  }
+  if (move.type !== 'beat') return null;
+  const combo = identifyCombo(move.tiles, from.table);
+  if (!combo) return null;
+  return { ...trick, combo, plays: [...trick.plays, { seat, type: 'beat', tiles: [...move.tiles], combo }] };
+}
+
 export function LabClient({ god }: { god: boolean }) {
   const [table, setTable] = useState<Table>({ ...DEFAULT_TABLE });
   const [seed, setSeed] = useState('lab');
   const [state, setState] = useState<State | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [bankerStreak, setBankerStreak] = useState(1);
+  const [heldTrick, setHeldTrick] = useState<View['trick']>(null);
+  const skipCpuDelay = useRef(false);
+
+  function commitMove(from: State, move: Move, seat: number) {
+    const held = trickAfterFourth(from, move, seat);
+    if (held) {
+      setHeldTrick(held);
+      skipCpuDelay.current = true;
+    }
+    setState(applyMove(from, move, seat));
+    setSelected([]);
+  }
 
   useEffect(() => {
-    if (!state || state.phase === 'recap' || state.toAct === 0) return;
+    if (heldTrick) {
+      const hold = window.setTimeout(() => setHeldTrick(null), CPU_PLAY_MS);
+      return () => window.clearTimeout(hold);
+    }
+    if (!state || state.phase === 'recap' || state.toAct === 0) {
+      skipCpuDelay.current = false;
+      return;
+    }
     let cancelled = false;
-    const delay = cpuDelay(state);
+    const delay = skipCpuDelay.current ? 0 : cpuDelay(state);
+    skipCpuDelay.current = false;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
       const move = nextCpuMove(state, state.toAct);
       if (!move) return;
-      setState(applyMove(state, move, state.toAct));
-      setSelected([]);
+      commitMove(state, move, state.toAct);
     }, delay);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [state]);
+  }, [state, heldTrick]);
 
   const view = state ? projectView(state, 0) : null;
+  const shownTrick = heldTrick ?? view?.trick ?? null;
   const selectedCombo = identifyCombo(selected, table);
-  const humanTurn = Boolean(state && state.toAct === 0 && state.phase !== 'recap');
+  const humanTurn = Boolean(state && state.toAct === 0 && state.phase !== 'recap' && !heldTrick);
 
   function deal(nextTable = table, nextBanker = 0, chips = [100, 100, 100, 100], streak = 1, nextSeedValue = seed) {
     const dealt = createHand({ seed: nextSeedValue, table: nextTable, bankerSeat: nextBanker, chips, bankerStreak: streak });
+    setHeldTrick(null);
+    skipCpuDelay.current = false;
     setState(dealt);
     setSelected([]);
     setBankerStreak(streak);
@@ -99,8 +134,7 @@ export function LabClient({ god }: { god: boolean }) {
 
   function play(move: Move) {
     if (!state || !humanTurn) return;
-    setState(applyMove(state, move, 0));
-    setSelected([]);
+    commitMove(state, move, 0);
   }
 
   function toggle(id: string) {
@@ -114,17 +148,18 @@ export function LabClient({ god }: { god: boolean }) {
   }
 
   const legal = state ? listLegalMoves(state, 0) : [];
-  const canLead = Boolean(state && state.phase === 'lead' && selectedCombo && legal.some((move) => move.type === 'lead' && sameMove(move, { type: 'lead', tiles: selected })));
-  const canBeat = Boolean(state && state.phase === 'follow' && selectedCombo && legal.some((move) => move.type === 'beat' && sameMove(move, { type: 'beat', tiles: selected })));
-  const canDump = Boolean(state && state.phase === 'follow' && legal.some((move) => move.type === 'dump' && sameMove(move, { type: 'dump', tiles: selected })));
+  const canLead = Boolean(humanTurn && state && state.phase === 'lead' && selectedCombo && legal.some((move) => move.type === 'lead' && sameMove(move, { type: 'lead', tiles: selected })));
+  const canBeat = Boolean(humanTurn && state && state.phase === 'follow' && selectedCombo && legal.some((move) => move.type === 'beat' && sameMove(move, { type: 'beat', tiles: selected })));
+  const canDump = Boolean(humanTurn && state && state.phase === 'follow' && legal.some((move) => move.type === 'dump' && sameMove(move, { type: 'dump', tiles: selected })));
 
   const status = useMemo(() => {
     if (!state) return '調好臺面，開一副牌。';
+    if (heldTrick) return '看這一墩';
     if (state.phase === 'recap') return `${SEAT_WIND[state.jieSeat ?? 0]} 結`;
     if (state.phase === 'example') return '例牌窗口';
     if (state.toAct === 0) return state.phase === 'lead' ? '你出' : '你打或墊';
     return `${SEAT_WIND[state.toAct]} 出牌中`;
-  }, [state]);
+  }, [state, heldTrick]);
 
   return (
     <div className="tgw-lab">
@@ -166,7 +201,7 @@ export function LabClient({ god }: { god: boolean }) {
           <div className="tgw-actions">
             <button className="tgw-btn" type="button" onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed('lab'))}>開牌</button>
             <button className="tgw-btn ghost" type="button" disabled={!state} onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed(seed))}>再來</button>
-            <button className="tgw-btn ghost" type="button" disabled={state?.phase !== 'recap'} onClick={continueHand}>下一局 · 飛莊</button>
+            <button className="tgw-btn ghost" type="button" disabled={state?.phase !== 'recap' || Boolean(heldTrick)} onClick={continueHand}>下一局 · 飛莊</button>
           </div>
         </section>
 
@@ -177,7 +212,7 @@ export function LabClient({ god }: { god: boolean }) {
             const hand = sortHandDisplay(raw);
             const hiddenCount = state && seat !== 0 && !god ? state.hands[seat].length : 0;
             return (
-              <div className={`tgw-seat ${place} ${state?.toAct === seat ? 'to-act' : ''}`} data-seat={seat} key={seat}>
+              <div className={`tgw-seat ${place} ${!heldTrick && state?.toAct === seat ? 'to-act' : ''}`} data-seat={seat} key={seat}>
                 <div className="tgw-seat-meta">
                   <strong>{name}</strong>
                   {seat === 0 ? <span>你</span> : null}
@@ -200,10 +235,10 @@ export function LabClient({ god }: { god: boolean }) {
             );
           })}
           <div className="tgw-center">
-            <div className="tgw-trick-board">
+            <div className="tgw-trick-board" data-trick-hold={heldTrick ? '1' : '0'}>
               <strong className="tgw-status">{status}</strong>
               {SEAT_PLACE.map(({ seat, place }) => {
-                const play = view?.trick?.plays.find((item) => item.seat === seat);
+                const play = shownTrick?.plays.find((item) => item.seat === seat);
                 return (
                   <div className={`tgw-trick-slot ${place}`} data-trick-seat={seat} key={`trick-${seat}`}>
                     {play
@@ -242,7 +277,7 @@ export function LabClient({ god }: { god: boolean }) {
             <p className="tgw-kicker">公開紀錄</p>
             {(view?.log ?? []).slice(-16).map((line, index) => <p key={`${line}-${index}`}>{formatPublic(line)}</p>)}
           </div>
-          {state?.recap ? (
+          {state?.recap && !heldTrick ? (
             <div className="tgw-recap">
               <p className="tgw-kicker">結</p>
               <table>
