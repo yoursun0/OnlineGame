@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   applyMove,
   createHand,
@@ -9,6 +9,7 @@ import {
   nextCpuMove,
   projectView,
   sameMove,
+  sortHandDisplay,
   type Move,
   type State,
   type Table,
@@ -17,40 +18,47 @@ import {
 } from '@playroom/tien-gow';
 import { BoneTile } from './tile';
 
-const OPTION_LABELS: Array<[keyof Table, string]> = [
-  ['wenHonor', '文尊'],
-  ['captureWenHonor', '擒文尊'],
-  ['yaoSettle', '么結'],
-  ['yaoCapture', '么雙擒四'],
-  ['baoHonor', '包尊'],
-  ['fourBless', '賀四 / 四大包'],
-  ['slam', '七支 / 八支'],
-  ['examples', '例牌'],
-  ['baoHonorAlsoHe', '包尊亦賀'],
-  ['extraExamples', '額外例牌'],
+const CPU_PLAY_MS = 3000;
+const CPU_SKIP_MS = 400;
+
+const SEAT_WIND = ['東位', '南位', '西位', '北位'] as const;
+
+const OPTION_LABELS: Array<[keyof Table, string, string]> = [
+  ['wenHonor', '文尊', '孖伶冧作文尊。領出後除非開了擒文尊，否則無人可打。'],
+  ['captureWenHonor', '擒文尊', '孖高腳可打領出的文尊，並照賀尊收錢。需先開文尊。'],
+  ['yaoSettle', '么結', '單張三雞結牌為么結 ×2。開了文尊時，單張伶冧六也可么結。'],
+  ['yaoCapture', '么雙擒四', '大頭六結領出的三雞、或高腳七結領出的伶冧六：被擒者代付低於門檻的輸分，再 ×4。需先開么結。'],
+  ['baoHonor', '包尊', '最後一墩至尊（武尊，或無人打的文尊）為包尊，結分 ×2。該墩不收賀錢。'],
+  ['fourBless', '賀四 / 四大包', '非最後的四文武收賀四（基數 4）。最後一墩四文武為四大包 ×4。'],
+  ['slam', '七支 / 八支', '結時拿齊 8 棟。視最後一墩為七支 ×2 或八支 ×4。'],
+  ['examples', '例牌', '開牌後先看例牌：一點紅、七武、全白、八武。符合者可即時結，不打牌。'],
+  ['baoHonorAlsoHe', '包尊亦賀', '包尊／四大包仍先收賀錢，再算結分倍數。'],
+  ['extraExamples', '額外例牌', '加四對子、七星文士、八方文士三款例牌。'],
 ];
 
 const SEAT_PLACE: Array<{ seat: number; place: 'south' | 'east' | 'north' | 'west'; name: string }> = [
-  { seat: 0, place: 'south', name: '你' },
-  { seat: 1, place: 'east', name: '下家 CPU' },
-  { seat: 2, place: 'north', name: '對家 CPU' },
-  { seat: 3, place: 'west', name: '上家 CPU' },
+  { seat: 0, place: 'south', name: SEAT_WIND[0] },
+  { seat: 1, place: 'east', name: SEAT_WIND[1] },
+  { seat: 2, place: 'north', name: SEAT_WIND[2] },
+  { seat: 3, place: 'west', name: SEAT_WIND[3] },
 ];
-
-function runCpu(state: State): State {
-  let next = state;
-  let guard = 0;
-  while (next.phase !== 'recap' && next.toAct !== 0 && guard < 240) {
-    const move = nextCpuMove(next, next.toAct);
-    if (!move) break;
-    next = applyMove(next, move, next.toAct);
-    guard += 1;
-  }
-  return next;
-}
 
 function nextSeed(seed: string): string {
   return `${seed}:${Date.now().toString(36)}`;
+}
+
+function formatPublic(text: string): string {
+  return text
+    .replace(/\bseat (\d)\b/g, (_, digit: string) => SEAT_WIND[Number(digit)] ?? `seat ${digit}`)
+    .replace(/\b([0-3])→([0-3])\b/g, (_, from: string, to: string) => `${SEAT_WIND[Number(from)]}→${SEAT_WIND[Number(to)]}`);
+}
+
+function cpuDelay(state: State): number {
+  if (state.phase === 'example' && state.toAct !== 0) {
+    const move = nextCpuMove(state, state.toAct);
+    if (move?.type === 'skipExample') return CPU_SKIP_MS;
+  }
+  return CPU_PLAY_MS;
 }
 
 export function LabClient({ god }: { god: boolean }) {
@@ -60,11 +68,29 @@ export function LabClient({ god }: { god: boolean }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [bankerStreak, setBankerStreak] = useState(1);
 
+  useEffect(() => {
+    if (!state || state.phase === 'recap' || state.toAct === 0) return;
+    let cancelled = false;
+    const delay = cpuDelay(state);
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const move = nextCpuMove(state, state.toAct);
+      if (!move) return;
+      setState(applyMove(state, move, state.toAct));
+      setSelected([]);
+    }, delay);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [state]);
+
   const view = state ? projectView(state, 0) : null;
   const selectedCombo = identifyCombo(selected, table);
+  const humanTurn = Boolean(state && state.toAct === 0 && state.phase !== 'recap');
 
   function deal(nextTable = table, nextBanker = 0, chips = [100, 100, 100, 100], streak = 1, nextSeedValue = seed) {
-    const dealt = runCpu(createHand({ seed: nextSeedValue, table: nextTable, bankerSeat: nextBanker, chips, bankerStreak: streak }));
+    const dealt = createHand({ seed: nextSeedValue, table: nextTable, bankerSeat: nextBanker, chips, bankerStreak: streak });
     setState(dealt);
     setSelected([]);
     setBankerStreak(streak);
@@ -72,9 +98,8 @@ export function LabClient({ god }: { god: boolean }) {
   }
 
   function play(move: Move) {
-    if (!state) return;
-    const next = runCpu(applyMove(state, move, 0));
-    setState(next);
+    if (!state || !humanTurn) return;
+    setState(applyMove(state, move, 0));
     setSelected([]);
   }
 
@@ -95,10 +120,10 @@ export function LabClient({ god }: { god: boolean }) {
 
   const status = useMemo(() => {
     if (!state) return '調好臺面，開一副牌。';
-    if (state.phase === 'recap') return `seat ${state.jieSeat} 結`;
+    if (state.phase === 'recap') return `${SEAT_WIND[state.jieSeat ?? 0]} 結`;
     if (state.phase === 'example') return '例牌窗口';
     if (state.toAct === 0) return state.phase === 'lead' ? '你出' : '你打或墊';
-    return `seat ${state.toAct} 思考中`;
+    return `${SEAT_WIND[state.toAct]} 出牌中`;
   }, [state]);
 
   return (
@@ -115,21 +140,27 @@ export function LabClient({ god }: { god: boolean }) {
         <section className="tgw-table-card" aria-label="Table">
           <p className="tgw-kicker">Table</p>
           <div className="tgw-options">
-            {OPTION_LABELS.map(([key, label]) => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  checked={table[key]}
-                  disabled={Boolean(state && state.phase !== 'recap') || (key === 'captureWenHonor' && !table.wenHonor)}
-                  onChange={(event) => {
-                    const next = { ...table, [key]: event.target.checked };
-                    if (key === 'wenHonor' && !event.target.checked) next.captureWenHonor = false;
-                    if (key === 'yaoSettle' && !event.target.checked) next.yaoCapture = false;
-                    setTable(next);
-                  }}
-                />
-                {label}
-              </label>
+            {OPTION_LABELS.map(([key, label, hint]) => (
+              <div className="tgw-option" key={key}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={table[key]}
+                    disabled={Boolean(state && state.phase !== 'recap') || (key === 'captureWenHonor' && !table.wenHonor)}
+                    onChange={(event) => {
+                      const next = { ...table, [key]: event.target.checked };
+                      if (key === 'wenHonor' && !event.target.checked) next.captureWenHonor = false;
+                      if (key === 'yaoSettle' && !event.target.checked) next.yaoCapture = false;
+                      setTable(next);
+                    }}
+                  />
+                  {label}
+                </label>
+                <span className="tgw-tip">
+                  <button type="button" className="tgw-info" aria-label={`${label}說明`} aria-describedby={`tgw-tip-${key}`}>i</button>
+                  <span className="tgw-tip-panel" role="tooltip" id={`tgw-tip-${key}`}>{hint}</span>
+                </span>
+              </div>
             ))}
           </div>
           <div className="tgw-actions">
@@ -142,23 +173,25 @@ export function LabClient({ god }: { god: boolean }) {
         <section className="tgw-board" aria-label="Table felt">
           <div className="tgw-felt" />
           {SEAT_PLACE.map(({ seat, place, name }) => {
-            const hand = god && state ? state.hands[seat] : seat === 0 ? state?.hands[0] ?? [] : [];
+            const raw = god && state ? state.hands[seat] : seat === 0 ? state?.hands[0] ?? [] : [];
+            const hand = sortHandDisplay(raw);
             const hiddenCount = state && seat !== 0 && !god ? state.hands[seat].length : 0;
             return (
-              <div className={`tgw-seat ${place} ${state?.toAct === seat ? 'to-act' : ''}`} key={seat}>
+              <div className={`tgw-seat ${place} ${state?.toAct === seat ? 'to-act' : ''}`} data-seat={seat} key={seat}>
                 <div className="tgw-seat-meta">
                   <strong>{name}</strong>
+                  {seat === 0 ? <span>你</span> : null}
                   <span>{state ? `${state.dong[seat]} 棟 · ${state.chips[seat]}` : '—'}</span>
                   {state?.bankerSeat === seat ? <span>莊</span> : null}
                 </div>
-                <div className="tgw-seat-row">
+                <div className="tgw-seat-grid">
                   {seat === 0 || god
                     ? hand.map((id) => (
                       <BoneTile
                         key={id}
                         tile={getTile(id)}
                         selected={seat === 0 && selected.includes(id)}
-                        onClick={seat === 0 && state?.toAct === 0 && state.phase !== 'recap' ? () => toggle(id) : undefined}
+                        onClick={seat === 0 && humanTurn ? () => toggle(id) : undefined}
                       />
                     ))
                     : Array.from({ length: hiddenCount }, (_, index) => <BoneTile key={`${seat}-back-${index}`} faceDown />)}
@@ -167,20 +200,27 @@ export function LabClient({ god }: { god: boolean }) {
             );
           })}
           <div className="tgw-center">
-            <div>
-              <strong>{status}</strong>
-              <div className="tgw-trick">
-                {view?.trick?.plays.map((play, index) => (
-                  play.type === 'dump'
-                    ? Array.from({ length: play.count }, (_, dumpIndex) => <BoneTile key={`d-${index}-${dumpIndex}`} faceDown />)
-                    : play.tiles.map((id) => <BoneTile key={id} tile={getTile(id)} />)
-                ))}
-              </div>
+            <div className="tgw-trick-board">
+              <strong className="tgw-status">{status}</strong>
+              {SEAT_PLACE.map(({ seat, place }) => {
+                const play = view?.trick?.plays.find((item) => item.seat === seat);
+                return (
+                  <div className={`tgw-trick-slot ${place}`} data-trick-seat={seat} key={`trick-${seat}`}>
+                    {play
+                      ? play.type === 'dump'
+                        ? Array.from({ length: play.count }, (_, dumpIndex) => (
+                          <BoneTile key={`d-${seat}-${dumpIndex}`} faceDown />
+                        ))
+                        : play.tiles.map((id) => <BoneTile key={id} tile={getTile(id)} />)
+                      : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {state?.toasts[0] ? <div className="tgw-toast" role="status">{state.toasts[0].title} · {state.toasts[0].detail}</div> : null}
+        {state?.toasts[0] ? <div className="tgw-toast" role="status">{formatPublic(`${state.toasts[0].title} · ${state.toasts[0].detail}`)}</div> : null}
 
         <div className="tgw-hand">
           <p className="tgw-kicker">你的手牌 · {selectedCombo ? selectedCombo.label : '點牌組成一套'}</p>
@@ -200,24 +240,24 @@ export function LabClient({ god }: { god: boolean }) {
         <div className="tgw-columns">
           <div className="tgw-log" aria-label="Public log">
             <p className="tgw-kicker">公開紀錄</p>
-            {(view?.log ?? []).slice(-16).map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
+            {(view?.log ?? []).slice(-16).map((line, index) => <p key={`${line}-${index}`}>{formatPublic(line)}</p>)}
           </div>
           {state?.recap ? (
             <div className="tgw-recap">
               <p className="tgw-kicker">結</p>
               <table>
-                <thead><tr><th>Seat</th><th>棟</th><th>籌碼</th></tr></thead>
+                <thead><tr><th>座位</th><th>棟</th><th>籌碼</th></tr></thead>
                 <tbody>
                   {state.recap.dong.map((dong, seat) => (
                     <tr key={seat}>
-                      <td>{seat}{state.recap?.jieSeat === seat ? ' 結' : ''}{state.bankerSeat === seat ? ' 莊' : ''}</td>
+                      <td>{SEAT_WIND[seat]}{state.recap?.jieSeat === seat ? ' 結' : ''}{state.bankerSeat === seat ? ' 莊' : ''}{seat === 0 ? ' 你' : ''}</td>
                       <td>{dong}</td>
                       <td>{state.recap?.chipsAfter[seat]}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p>{[state.recap.flags.example, state.recap.flags.slam, state.recap.flags.baoHonor && '包尊', state.recap.flags.fourBao && '四大包'].filter(Boolean).join(' · ')} {state.recap.payments.map((payment) => `${payment.from}→${payment.to} ${payment.amount}`).join(' · ')}</p>
+              <p>{[state.recap.flags.example, state.recap.flags.slam, state.recap.flags.baoHonor && '包尊', state.recap.flags.fourBao && '四大包'].filter(Boolean).join(' · ')} {state.recap.payments.map((payment) => `${SEAT_WIND[payment.from]}→${SEAT_WIND[payment.to]} ${payment.amount}`).join(' · ')}</p>
             </div>
           ) : <div />}
         </div>

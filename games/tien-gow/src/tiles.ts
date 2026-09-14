@@ -121,3 +121,14 @@ export function wuTiles(name: WuName): Tile[] {
 export function sortTileIds(ids: readonly TileId[]): TileId[] {
   return [...ids].sort((left, right) => left.localeCompare(right));
 }
+
+/** Display order: 文子 then 武子, each high to low (天…伶冧六, 九…三雞). */
+export function sortHandDisplay(ids: readonly TileId[]): TileId[] {
+  return [...ids].sort((left, right) => {
+    const a = getTile(left);
+    const b = getTile(right);
+    if (a.suit !== b.suit) return a.suit === 'wen' ? -1 : 1;
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return a.id.localeCompare(b.id);
+  });
+}

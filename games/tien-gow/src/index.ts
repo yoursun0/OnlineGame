@@ -32,6 +32,7 @@ export {
   getTile,
   isRedPip,
   redPips,
+  sortHandDisplay,
   sortTileIds,
   wenId,
   wuId,

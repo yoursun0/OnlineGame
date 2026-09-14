@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { DECK, getTile, redPips, wenId, wenTiles, wuId, wuTiles } from '../src/tiles';
+import { DECK, getTile, redPips, sortHandDisplay, wenId, wenTiles, wuId, wuTiles } from '../src/tiles';
 
 test('deck has 32 unique identities', () => {
   expect(DECK).toHaveLength(32);
@@ -25,6 +25,18 @@ test('武子 ranks by pip total', () => {
   expect(wuTiles('datou')[0].rank).toBe(4);
   expect(wuTiles('wu').map((tile) => tile.rank)).toEqual([5, 5]);
   expect(wuTiles('sanjie')[0].rank).toBe(6);
+});
+
+test('sortHandDisplay is 文 then 武, each high to low', () => {
+  const ids = [
+    wuId([1, 2]),
+    wenId('lingren', 0),
+    wenId('tian', 1),
+    wuId([3, 6]),
+    wenId('di', 0),
+    wuId([2, 3]),
+  ];
+  expect(sortHandDisplay(ids).map((id) => getTile(id).label)).toEqual(['天', '地', '伶冧六', '九', '五', '三雞']);
 });
 
 test('red pip counts follow 1 and 4', () => {
