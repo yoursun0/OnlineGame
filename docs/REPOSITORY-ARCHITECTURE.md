@@ -11,8 +11,9 @@ OnlineGame/
 ├── app/                         # production web app / Vercel entry point
 ├── games/                       # one folder per game
 │   ├── tic-tac-toe/             # TIK-XXX
-│   ├── little-stairs/           # LAD-XXX
-│   └── connect-four/            # CON-XXX
+│   ├── downstairs/              # LAD-XXX
+│   ├── connect-four/            # CON-XXX
+│   └── tien-gow/                # TGW-XXX
 ├── packages/                    # shared code with stable boundaries
 │   ├── game-core/
 │   ├── room-protocol/
@@ -51,6 +52,7 @@ The platform owns:
 | Tic-tac-toe / 井字過三關 | `TIK` | `TIK-R77` |
 | 小朋友落樓梯 | `LAD` | `LAD-ZHW` |
 | Connect Four / 四子棋 | `CON` | `CON-K8P` |
+| 打天九 / Tien Gow | `TGW` | `TGW-4K8` |
 
 The prefix is a recognition and routing hint, not a security boundary. The server owns uniqueness, expiry, and authorization.
 
