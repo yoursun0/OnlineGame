@@ -290,24 +290,24 @@ export function LabClient({ god }: { god: boolean }) {
             <p className="tgw-kicker">公開紀錄</p>
             {(view?.log ?? []).slice(-16).map((line, index) => <p key={`${line}-${index}`}>{formatPublic(line)}</p>)}
           </div>
-          {state?.recap && !heldTrick ? (
-            <div className="tgw-recap">
-              <p className="tgw-kicker">結</p>
-              <table>
-                <thead><tr><th>座位</th><th>棟</th><th>籌碼</th></tr></thead>
-                <tbody>
-                  {state.recap.dong.map((dong, seat) => (
-                    <tr key={seat}>
-                      <td>{SEAT_WIND[seat]}{state.recap?.jieSeat === seat ? ' 結' : ''}{state.bankerSeat === seat ? ' 莊' : ''}{seat === 0 ? ' 你' : ''}</td>
-                      <td>{dong}</td>
-                      <td>{state.recap?.chipsAfter[seat]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="tgw-recap" aria-label="籌碼">
+            <p className="tgw-kicker">{state?.recap && !heldTrick ? '結' : '籌碼'}</p>
+            <table>
+              <thead><tr><th>座位</th><th>棟</th><th>籌碼</th></tr></thead>
+              <tbody>
+                {[0, 1, 2, 3].map((seat) => (
+                  <tr key={seat}>
+                    <td>{SEAT_WIND[seat]}{state?.recap && !heldTrick && state.recap.jieSeat === seat ? ' 結' : ''}{state?.bankerSeat === seat ? ' 莊' : ''}{seat === 0 ? ' 你' : ''}</td>
+                    <td>{state ? state.dong[seat] : '—'}</td>
+                    <td>{state ? state.chips[seat] : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {state?.recap && !heldTrick ? (
               <p>{[state.recap.flags.example, state.recap.flags.slam, state.recap.flags.baoHonor && '包尊', state.recap.flags.fourBao && '四大包'].filter(Boolean).join(' · ')} {state.recap.payments.map((payment) => `${SEAT_WIND[payment.from]}→${SEAT_WIND[payment.to]} ${payment.amount}`).join(' · ')}</p>
-            </div>
-          ) : <div />}
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
