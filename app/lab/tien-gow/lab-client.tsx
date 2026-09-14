@@ -211,9 +211,8 @@ export function LabClient({ god }: { god: boolean }) {
             ))}
           </div>
           <div className="tgw-actions">
-            <button className="tgw-btn" type="button" onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed('lab'))}>開牌</button>
-            <button className="tgw-btn ghost" type="button" disabled={!state} onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed(seed))}>再來</button>
-            <button className="tgw-btn ghost" type="button" disabled={state?.phase !== 'recap' || Boolean(heldTrick)} onClick={continueHand}>下一局 · 飛莊</button>
+            <button className="tgw-btn" type="button" onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed('lab'))}>{state ? '重開牌局' : '開牌'}</button>
+            <button className="tgw-btn ghost" type="button" disabled={state?.phase !== 'recap' || Boolean(heldTrick)} onClick={continueHand}>下一局</button>
           </div>
         </section>
 
