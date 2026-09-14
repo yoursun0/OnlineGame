@@ -1,6 +1,6 @@
 'use client';
 
-import { getTile, isRedPip, type Tile } from '@playroom/tien-gow';
+import { getTile, isPipPaintRed, type Tile } from '@playroom/tien-gow';
 
 export function BoneTile({
   tile,
@@ -35,9 +35,9 @@ export function BoneTile({
 
   const inner = (
     <>
-      <PipFace value={tile.pips[0]} />
+      <PipFace tile={tile} face={0} />
       <span className="tgw-bone-waist" />
-      <PipFace value={tile.pips[1]} />
+      <PipFace tile={tile} face={1} />
       <span className="tgw-bone-name">{tile.label}</span>
     </>
   );
@@ -57,13 +57,14 @@ export function BoneTile({
   );
 }
 
-function PipFace({ value }: { value: number }) {
+function PipFace({ tile, face }: { tile: Tile; face: 0 | 1 }) {
+  const value = tile.pips[face];
   return (
     <span className="tgw-face" aria-hidden="true">
       {pipSlots(value).map(([x, y], index) => (
         <i
           key={`${value}-${index}`}
-          className={isRedPip(value) ? 'pip red' : 'pip'}
+          className={isPipPaintRed(tile, face, index) ? 'pip red' : 'pip'}
           style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
@@ -76,15 +77,15 @@ function pipSlots(value: number): Array<[number, number]> {
     case 1:
       return [[50, 50]];
     case 2:
-      return [[28, 28], [72, 72]];
+      return [[26, 24], [74, 76]];
     case 3:
-      return [[28, 28], [50, 50], [72, 72]];
+      return [[26, 24], [50, 50], [74, 76]];
     case 4:
-      return [[28, 28], [72, 28], [28, 72], [72, 72]];
+      return [[26, 24], [74, 24], [26, 76], [74, 76]];
     case 5:
-      return [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]];
+      return [[26, 24], [74, 24], [50, 50], [26, 76], [74, 76]];
     case 6:
-      return [[28, 28], [72, 28], [28, 50], [72, 50], [28, 72], [72, 72]];
+      return [[26, 20], [74, 20], [26, 50], [74, 50], [26, 80], [74, 80]];
     default:
       return [];
   }

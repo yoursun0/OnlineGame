@@ -37,7 +37,7 @@ const WEN: ReadonlyArray<{ name: WenName; label: string; pips: readonly [number,
   { name: 'changsan', label: '長三', pips: [3, 3], rank: 6 },
   { name: 'bandeng', label: '板凳', pips: [2, 2], rank: 7 },
   { name: 'futou', label: '斧頭', pips: [5, 6], rank: 8 },
-  { name: 'pingfeng', label: '屏風', pips: [4, 6], rank: 9 },
+  { name: 'pingfeng', label: '紅頭十', pips: [4, 6], rank: 9 },
   { name: 'gaojiao', label: '高腳七', pips: [1, 6], rank: 10 },
   { name: 'lingren', label: '伶冧六', pips: [1, 5], rank: 11 },
 ];
@@ -52,7 +52,7 @@ const WU: ReadonlyArray<{ name: WuName; label: string; pips: readonly [number, n
   { name: 'datou', label: '大頭六', pips: [2, 4], rank: 4 },
   { name: 'wu', label: '五', pips: [2, 3], rank: 5 },
   { name: 'wu', label: '五', pips: [1, 4], rank: 5 },
-  { name: 'sanjie', label: '三雞', pips: [1, 2], rank: 6 },
+  { name: 'sanjie', label: '么三', pips: [1, 2], rank: 6 },
 ];
 
 export function redPips(pips: readonly [number, number]): number {
@@ -61,6 +61,13 @@ export function redPips(pips: readonly [number, number]): number {
 
 export function isRedPip(pip: number): boolean {
   return pip === 1 || pip === 4;
+}
+
+/** Paint color for one pip. 天's sixes have two red centre pips; 例牌 red-count still uses `isRedPip`. */
+export function isPipPaintRed(tile: Tile, face: 0 | 1, pipIndex: number): boolean {
+  const value = tile.pips[face];
+  if (tile.name === 'tian' && value === 6) return pipIndex === 2 || pipIndex === 3;
+  return isRedPip(value);
 }
 
 export function wenId(name: WenName, copy: 0 | 1): TileId {
@@ -122,7 +129,7 @@ export function sortTileIds(ids: readonly TileId[]): TileId[] {
   return [...ids].sort((left, right) => left.localeCompare(right));
 }
 
-/** Display order: 文子 then 武子, each high to low (天…伶冧六, 九…三雞). */
+/** Display order: 文子 then 武子, each high to low (天…伶冧六, 九…么三). */
 export function sortHandDisplay(ids: readonly TileId[]): TileId[] {
   return [...ids].sort((left, right) => {
     const a = getTile(left);

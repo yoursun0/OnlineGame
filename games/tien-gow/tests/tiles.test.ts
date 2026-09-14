@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { DECK, getTile, redPips, sortHandDisplay, wenId, wenTiles, wuId, wuTiles } from '../src/tiles';
+import { DECK, getTile, isPipPaintRed, redPips, sortHandDisplay, wenId, wenTiles, wuId, wuTiles } from '../src/tiles';
 
 test('deck has 32 unique identities', () => {
   expect(DECK).toHaveLength(32);
@@ -36,7 +36,21 @@ test('sortHandDisplay is 文 then 武, each high to low', () => {
     wenId('di', 0),
     wuId([2, 3]),
   ];
-  expect(sortHandDisplay(ids).map((id) => getTile(id).label)).toEqual(['天', '地', '伶冧六', '九', '五', '三雞']);
+  expect(sortHandDisplay(ids).map((id) => getTile(id).label)).toEqual(['天', '地', '伶冧六', '九', '五', '么三']);
+});
+
+test('display names follow 紅頭十 / 么三', () => {
+  expect(getTile(wenId('pingfeng', 0)).label).toBe('紅頭十');
+  expect(getTile(wuId([1, 2])).label).toBe('么三');
+});
+
+test('天 sixes paint two centre pips red without counting as 例牌 red', () => {
+  const tian = getTile(wenId('tian', 0));
+  expect(tian.red).toBe(0);
+  expect([0, 1, 2, 3, 4, 5].map((index) => isPipPaintRed(tian, 0, index))).toEqual([false, false, true, true, false, false]);
+  const axeSix = getTile(wenId('futou', 0));
+  expect(axeSix.pips[1]).toBe(6);
+  expect([0, 1, 2, 3, 4, 5].some((index) => isPipPaintRed(axeSix, 1, index))).toBe(false);
 });
 
 test('red pip counts follow 1 and 4', () => {

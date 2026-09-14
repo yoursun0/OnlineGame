@@ -19,7 +19,7 @@ Always on: 格食格, 墊牌 face down, 上家不打下家不墊, equal-rank 武
 | --- | --- | --- |
 | `wenHonor` | on | 孖伶冧 is 文尊 |
 | `captureWenHonor` | on | ignored unless `wenHonor`. 孖高腳 beats led 文尊 |
-| `yaoSettle` | on | 三雞 么結. 伶冧六 么結 only if `wenHonor` |
+| `yaoSettle` | on | 么三 么結. 伶冧六 么結 only if `wenHonor` |
 | `yaoCapture` | on | ignored unless `yaoSettle`. 么雙擒四 |
 | `baoHonor` | on | 包尊. No 賀錢 on that trick |
 | `fourBless` | on | 賀四 and 四大包 |
@@ -32,7 +32,7 @@ Always on: 格食格, 墊牌 face down, 上家不打下家不墊, equal-rank 武
 
 ## Tiles
 
-1 and 4 pips are red; other pips are white.
+1 and 4 pips are red; other pips are white. 天's sixes also paint two centre pips red (display only; 例牌 still counts 1s and 4s).
 
 ### 文子, high to low, two of each
 
@@ -46,7 +46,7 @@ Always on: 格食格, 墊牌 face down, 上家不打下家不墊, equal-rank 武
 | 6 | 長三 | 3-3 | 0 |
 | 7 | 板凳 | 2-2 | 0 |
 | 8 | 斧頭 | 5-6 | 0 |
-| 9 | 屏風 | 4-6 | 1 |
+| 9 | 紅頭十 | 4-6 | 1 |
 | 10 | 高腳七 | 1-6 | 1 |
 | 11 | 伶冧六 | 1-5 | 1 |
 
@@ -59,9 +59,9 @@ Same pip total is equal.
 | 1 | 九 | 3-6, 4-5 | 0, 1 |
 | 2 | 八 | 3-5, 2-6 | 0, 0 |
 | 3 | 七 | 3-4, 2-5 | 1, 0 |
-| 4 | 大頭六 | 2-4 | 1 |
+| 4 | 大頭六（大雞） | 2-4 | 1 |
 | 5 | 五 | 2-3, 1-4 | 0, 2 |
-| 6 | 三雞 | 1-2 | 1 |
+| 6 | 么三（細雞） | 1-2 | 1 |
 
 ## Combinations
 
@@ -79,7 +79,7 @@ Aliases: 寶子 = 文對, 雜子 = 武對. 三文天九 / 三武天九 / 四天�
 | 三文 | 文對 + matching 武 | same family order |
 | 三武 | 武對 + matching 文 | same family order |
 | 四文武 | 文對 + 武對 of that family | same family order |
-| 至尊 | 三雞 + 大頭六 | lead wins; beats nothing |
+| 至尊 | 么三 + 大頭六 | lead wins; beats nothing |
 | 文尊 | 孖伶冧 if `wenHonor` | lead wins unless `captureWenHonor` and 孖高腳 |
 
 Equal rank cannot beat. Face-up combo stays until a strictly higher same-class play.
@@ -138,8 +138,8 @@ Compute ordinary nets first. Extra multipliers apply to what 結 **wins** from s
 | --- | --- | --- |
 | 包尊 | 至尊 (武尊, or unbeaten 文尊) | ×2 |
 | 四大包 | 四文武 | ×4 |
-| 么結 | singleton 三雞, or 伶冧六 if `wenHonor` | ×2 |
-| 么雙擒四 | 大頭六 結 a led 三雞 么結, or 高腳七 結 a led 伶冧六 么結 | captured seat covers below-par losses (after 莊 multiplier), then ×4. 入一 / 入二 still paid by 結, not ×4 |
+| 么結 | singleton 么三, or 伶冧六 if `wenHonor` | ×2 |
+| 么雙擒四 | 大頭六 結 a led 么三 么結, or 高腳七 結 a led 伶冧六 么結 | captured seat covers below-par losses (after 莊 multiplier), then ×4. 入一 / 入二 still paid by 結, not ×4 |
 
 Beating 么 with a non-capturing tile, or capturing without 結, is ordinary play.
 
@@ -147,7 +147,7 @@ Beating 么 with a non-capturing tile, or capturing without 結, is ordinary pla
 
 結 with all 8 棟.
 
-**八支** if the last trick is 明面最大 (unbeatable face-up singleton), the minimum singleton (三雞; 伶冧六 if `wenHonor`), or a pair or larger. Otherwise **七支**.
+**八支** if the last trick is 明面最大 (unbeatable face-up singleton), the minimum singleton (么三; 伶冧六 if `wenHonor`), or a pair or larger. Otherwise **七支**.
 
 If 結 already has 7 棟 and others cannot contest the last singleton, that tile is forced: **七支**.
 

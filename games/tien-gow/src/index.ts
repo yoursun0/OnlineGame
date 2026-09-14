@@ -30,6 +30,7 @@ export {
   DECK,
   TILE_BY_ID,
   getTile,
+  isPipPaintRed,
   isRedPip,
   redPips,
   sortHandDisplay,
