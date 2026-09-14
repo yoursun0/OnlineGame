@@ -22,7 +22,7 @@ import { BoneTile } from './tile';
 const CPU_PLAY_MS = 2000;
 const CPU_SKIP_MS = 400;
 
-const SEAT_WIND = ['東位', '南位', '西位', '北位'] as const;
+const SEAT_WIND = ['南位', '東位', '北位', '西位'] as const;
 
 const OPTION_LABELS: Array<[keyof Table, string, string]> = [
   ['wenHonor', '文尊', '孖伶冧作文尊。領出後除非開了擒文尊，否則無人可打。'],
