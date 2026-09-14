@@ -129,6 +129,7 @@ body:has(.tgw-lab) { background: #140c09; }
   animation: tgw-lay .45s ease-out;
 }
 .tgw-hand { margin-top: 16px; padding: 16px; border-radius: 8px; }
+.tgw-play-hint { margin: 4px 0 0; color: var(--brass); font-size: 13px; }
 .tgw-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .tgw-columns { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 16px; }
 .tgw-log { min-height: 180px; padding: 14px; border-radius: 8px; font-size: 13px; color: var(--mist); }

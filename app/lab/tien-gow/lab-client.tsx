@@ -19,7 +19,7 @@ import {
 } from '@playroom/tien-gow';
 import { BoneTile } from './tile';
 
-const CPU_PLAY_MS = 3000;
+const CPU_PLAY_MS = 2000;
 const CPU_SKIP_MS = 400;
 
 const SEAT_WIND = ['東位', '南位', '西位', '北位'] as const;
@@ -157,6 +157,12 @@ export function LabClient({ god }: { god: boolean }) {
   const canLead = Boolean(humanTurn && state && state.phase === 'lead' && selectedCombo && legal.some((move) => move.type === 'lead' && sameMove(move, { type: 'lead', tiles: selected })));
   const canBeat = Boolean(humanTurn && state && state.phase === 'follow' && selectedCombo && legal.some((move) => move.type === 'beat' && sameMove(move, { type: 'beat', tiles: selected })));
   const canDump = Boolean(humanTurn && state && state.phase === 'follow' && legal.some((move) => move.type === 'dump' && sameMove(move, { type: 'dump', tiles: selected })));
+  const leadCombo = view?.trick?.combo ?? null;
+  const playHint = humanTurn && state?.phase === 'follow' && selectedCombo && leadCombo && !canBeat
+    ? selectedCombo.class !== leadCombo.class
+      ? `${selectedCombo.label}打不了${leadCombo.label} · 文武不同門`
+      : `${selectedCombo.label}要嚴格大過${leadCombo.label}`
+    : null;
 
   const status = useMemo(() => {
     if (!state) return '調好臺面，開一副牌。';
@@ -265,6 +271,7 @@ export function LabClient({ god }: { god: boolean }) {
 
         <div className="tgw-hand">
           <p className="tgw-kicker">你的手牌 · {selectedCombo ? selectedCombo.label : '點牌組成一套'}</p>
+          {playHint ? <p className="tgw-play-hint">{playHint}</p> : null}
           <div className="tgw-picker">
             {state?.phase === 'example' && legal.some((move) => move.type === 'claimExample') ? (
               <button className="tgw-btn" type="button" onClick={() => play({ type: 'claimExample' })}>例牌開</button>
