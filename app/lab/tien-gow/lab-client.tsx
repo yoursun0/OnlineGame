@@ -74,6 +74,12 @@ function trickAfterFourth(from: State, move: Move, seat: number): View['trick'] 
   return { ...trick, combo, plays: [...trick.plays, { seat, type: 'beat', tiles: [...move.tiles], combo }] };
 }
 
+function trickEater(trick: NonNullable<View['trick']>): number {
+  const beats = trick.plays.filter((play) => play.type === 'beat');
+  if (beats.length > 0) return beats[beats.length - 1].seat;
+  return trick.leader;
+}
+
 export function LabClient({ god }: { god: boolean }) {
   const [table, setTable] = useState<Table>({ ...DEFAULT_TABLE });
   const [seed, setSeed] = useState('lab');
@@ -154,7 +160,7 @@ export function LabClient({ god }: { god: boolean }) {
 
   const status = useMemo(() => {
     if (!state) return '調好臺面，開一副牌。';
-    if (heldTrick) return '看這一墩';
+    if (heldTrick) return `${SEAT_WIND[trickEater(heldTrick)]}食`;
     if (state.phase === 'recap') return `${SEAT_WIND[state.jieSeat ?? 0]} 結`;
     if (state.phase === 'example') return '例牌窗口';
     if (state.toAct === 0) return state.phase === 'lead' ? '你出' : '你打或墊';
