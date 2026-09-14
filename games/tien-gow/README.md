@@ -4,7 +4,7 @@
 - Room prefix: `TGW`
 - Players: 4, empty seats filled with CPU
 - Mode: turn-based only
-- Status: spec. Engine and lab UI not implemented.
+- Status: engine + `/lab/tien-gow`. `TGW` rooms are a separate issue.
 
 `rules.md` — play.
 `SPEC.md` — TDD implementation.
