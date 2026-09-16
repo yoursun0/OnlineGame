@@ -7,6 +7,7 @@ build/
 .vercel/
 
 # Local environment and secrets
+next-env.d.ts
 .env
 .env.*
 !.env.example
@@ -21,6 +22,7 @@ playwright-report/
 test-results/
 docs/uat/evidence/
 docs/uat/last-run.json
+games/tien-gow/docs/evidence/
 *.log
 *.tsbuildinfo
 
@@ -29,4 +31,5 @@ docs/uat/last-run.json
 Thumbs.db
 .idea/
 .vscode/
+.scratch/
 
