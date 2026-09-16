@@ -20,8 +20,9 @@ supabase/.branches/
 coverage/
 playwright-report/
 test-results/
-*/evidence/*.png
+docs/uat/evidence/
 docs/uat/last-run.json
+games/tien-gow/docs/evidence/
 *.log
 *.tsbuildinfo
 
