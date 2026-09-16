@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { parseLabQuery } from '@playroom/tien-gow';
 import { LabClient } from './lab-client';
 import './lab.css';
 
@@ -10,9 +11,8 @@ export const metadata: Metadata = {
 export default async function TienGowLabPage({
   searchParams,
 }: {
-  searchParams: Promise<{ god?: string | string[] }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const params = await searchParams;
-  const god = Array.isArray(params.god) ? params.god[0] === '1' : params.god === '1';
-  return <LabClient god={god} />;
+  const query = parseLabQuery(await searchParams);
+  return <LabClient query={query} />;
 }

@@ -9,3 +9,4 @@
 `rules.md` — play.
 `SPEC.md` — TDD implementation.
 `CONTEXT.md` — terms.
+`docs/test-plan.md` — lab UAT; pin deals with `?seed=` / `?fixture=`.

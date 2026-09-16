@@ -3,18 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyMove,
-  createHand,
+  dealLabHand,
   identifyCombo,
+  initialLabSeed,
+  initialLabTable,
   listLegalMoves,
   nextCpuMove,
+  nextLabCpuMove,
   projectView,
   sameMove,
   sortHandDisplay,
+  type LabQuery,
   type Move,
   type State,
   type Table,
   type View,
-  DEFAULT_TABLE,
   getTile,
 } from '@playroom/tien-gow';
 import { BoneTile } from './tile';
@@ -43,10 +46,6 @@ const SEAT_PLACE: Array<{ seat: number; place: 'south' | 'east' | 'north' | 'wes
   { seat: 2, place: 'north', name: SEAT_WIND[2] },
   { seat: 3, place: 'west', name: SEAT_WIND[3] },
 ];
-
-function nextSeed(seed: string): string {
-  return `${seed}:${Date.now().toString(36)}`;
-}
 
 function formatPublic(text: string): string {
   return text
@@ -80,14 +79,17 @@ function trickEater(trick: NonNullable<View['trick']>): number {
   return trick.leader;
 }
 
-export function LabClient({ god }: { god: boolean }) {
-  const [table, setTable] = useState<Table>({ ...DEFAULT_TABLE });
-  const [seed, setSeed] = useState('lab');
+export function LabClient({ query }: { query: LabQuery }) {
+  const [table, setTable] = useState<Table>(() => initialLabTable(query));
+  const [seed, setSeed] = useState(() => initialLabSeed(query));
   const [state, setState] = useState<State | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [bankerStreak, setBankerStreak] = useState(1);
   const [heldTrick, setHeldTrick] = useState<View['trick']>(null);
+  const [dealError, setDealError] = useState<string | undefined>();
   const skipCpuDelay = useRef(false);
+  const playAll = query.play === 'all';
+  const god = query.god;
 
   function commitMove(from: State, move: Move, seat: number) {
     const held = trickAfterFourth(from, move, seat);
@@ -104,7 +106,7 @@ export function LabClient({ god }: { god: boolean }) {
       const hold = window.setTimeout(() => setHeldTrick(null), CPU_PLAY_MS);
       return () => window.clearTimeout(hold);
     }
-    if (!state || state.phase === 'recap' || state.toAct === 0) {
+    if (playAll || !state || state.phase === 'recap' || state.toAct === 0) {
       skipCpuDelay.current = false;
       return;
     }
@@ -113,7 +115,7 @@ export function LabClient({ god }: { god: boolean }) {
     skipCpuDelay.current = false;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
-      const move = nextCpuMove(state, state.toAct);
+      const move = nextLabCpuMove(state, state.toAct, query.cpu);
       if (!move) return;
       commitMove(state, move, state.toAct);
     }, delay);
@@ -121,26 +123,37 @@ export function LabClient({ god }: { god: boolean }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [state, heldTrick]);
+  }, [state, heldTrick, playAll, query.cpu]);
 
-  const view = state ? projectView(state, 0) : null;
+  const actingSeat = state?.toAct ?? 0;
+  const view = state ? projectView(state, playAll ? actingSeat : 0) : null;
   const shownTrick = heldTrick ?? view?.trick ?? null;
-  const selectedCombo = identifyCombo(selected, table);
-  const humanTurn = Boolean(state && state.toAct === 0 && state.phase !== 'recap' && !heldTrick);
+  const selectedCombo = identifyCombo(selected, state?.table ?? table);
+  const humanTurn = Boolean(state && state.phase !== 'recap' && !heldTrick && (playAll || state.toAct === 0));
 
-  function deal(nextTable = table, nextBanker = 0, chips = [100, 100, 100, 100], streak = 1, nextSeedValue = seed) {
-    const dealt = createHand({ seed: nextSeedValue, table: nextTable, bankerSeat: nextBanker, chips, bankerStreak: streak });
+  function deal(kind: 'open' | 'rematch' | 'next') {
+    const result = dealLabHand({
+      query,
+      table,
+      currentSeed: seed,
+      kind,
+      chips: kind === 'next' ? state?.chips : undefined,
+      bankerSeat: kind === 'next' ? state?.jieSeat ?? 0 : undefined,
+      bankerStreak: kind === 'next' && state ? (state.jieSeat === state.bankerSeat ? bankerStreak + 1 : 1) : 1,
+    });
     setHeldTrick(null);
     skipCpuDelay.current = false;
-    setState(dealt);
+    setState(result.state);
     setSelected([]);
-    setBankerStreak(streak);
-    setSeed(nextSeedValue);
+    setBankerStreak(result.state.bankerStreak);
+    setSeed(result.seed);
+    setDealError(result.error);
+    setTable(result.state.table);
   }
 
   function play(move: Move) {
     if (!state || !humanTurn) return;
-    commitMove(state, move, 0);
+    commitMove(state, move, actingSeat);
   }
 
   function toggle(id: string) {
@@ -149,11 +162,10 @@ export function LabClient({ god }: { god: boolean }) {
 
   function continueHand() {
     if (!state?.jieSeat && state?.jieSeat !== 0) return;
-    const streak = state.jieSeat === state.bankerSeat ? bankerStreak + 1 : 1;
-    deal(table, state.jieSeat, state.chips, streak, nextSeed(seed));
+    deal('next');
   }
 
-  const legal = state ? listLegalMoves(state, 0) : [];
+  const legal = state && humanTurn ? listLegalMoves(state, actingSeat) : [];
   const canLead = Boolean(humanTurn && state && state.phase === 'lead' && selectedCombo && legal.some((move) => move.type === 'lead' && sameMove(move, { type: 'lead', tiles: selected })));
   const canBeat = Boolean(humanTurn && state && state.phase === 'follow' && selectedCombo && legal.some((move) => move.type === 'beat' && sameMove(move, { type: 'beat', tiles: selected })));
   const canDump = Boolean(humanTurn && state && state.phase === 'follow' && legal.some((move) => move.type === 'dump' && sameMove(move, { type: 'dump', tiles: selected })));
@@ -169,9 +181,9 @@ export function LabClient({ god }: { god: boolean }) {
     if (heldTrick) return `${SEAT_WIND[trickEater(heldTrick)]}食`;
     if (state.phase === 'recap') return `${SEAT_WIND[state.jieSeat ?? 0]} 結`;
     if (state.phase === 'example') return '例牌窗口';
-    if (state.toAct === 0) return state.phase === 'lead' ? '你出' : '你打或墊';
+    if (playAll || state.toAct === 0) return state.phase === 'lead' ? `${playAll ? SEAT_WIND[state.toAct] : '你'}出` : `${playAll ? SEAT_WIND[state.toAct] : '你'}打或墊`;
     return `${SEAT_WIND[state.toAct]} 出牌中`;
-  }, [state, heldTrick]);
+  }, [state, heldTrick, playAll]);
 
   return (
     <div className="tgw-lab">
@@ -180,6 +192,19 @@ export function LabClient({ god }: { god: boolean }) {
           <div>
             <p className="tgw-kicker">PLAYROOM lab · TGW · not in catalogue</p>
             <h1>打<em>天九</em></h1>
+            <p
+              className="tgw-harness"
+              data-lab-seed={seed}
+              data-lab-fixture={query.fixture ?? ''}
+              data-lab-banker={state ? String(state.bankerSeat) : ''}
+              data-lab-play={query.play}
+              data-lab-cpu={query.cpu}
+              data-lab-table={OPTION_LABELS.filter(([key]) => table[key]).map(([, label]) => label).join(',')}
+            >
+              seed {seed} · fixture {query.fixture ?? '—'} · 莊 {state ? SEAT_WIND[state.bankerSeat] : '—'} · play {query.play} · cpu {query.cpu}
+            </p>
+            <p className="tgw-harness">Table {OPTION_LABELS.filter(([key]) => table[key]).map(([, label]) => label).join(' · ')}</p>
+            {dealError ? <p className="tgw-harness-error">{dealError}</p> : null}
           </div>
           <a href="/">回大廳</a>
         </header>
@@ -211,7 +236,7 @@ export function LabClient({ god }: { god: boolean }) {
             ))}
           </div>
           <div className="tgw-actions">
-            <button className="tgw-btn" type="button" onClick={() => deal(table, 0, [100, 100, 100, 100], 1, nextSeed('lab'))}>{state ? '重開牌局' : '開牌'}</button>
+            <button className="tgw-btn" type="button" onClick={() => deal(state ? 'rematch' : 'open')}>{state ? '重開牌局' : '開牌'}</button>
             <button className="tgw-btn ghost" type="button" disabled={state?.phase !== 'recap' || Boolean(heldTrick)} onClick={continueHand}>下一局</button>
           </div>
         </section>
@@ -219,25 +244,27 @@ export function LabClient({ god }: { god: boolean }) {
         <section className="tgw-board" aria-label="Table felt">
           <div className="tgw-felt" />
           {SEAT_PLACE.map(({ seat, place, name }) => {
-            const raw = god && state ? state.hands[seat] : seat === 0 ? state?.hands[0] ?? [] : [];
+            const showFaces = Boolean(state && (god || (playAll ? seat === actingSeat : seat === 0)));
+            const raw = showFaces && state ? state.hands[seat] : [];
             const hand = sortHandDisplay(raw);
-            const hiddenCount = state && seat !== 0 && !god ? state.hands[seat].length : 0;
+            const hiddenCount = state && !showFaces ? state.hands[seat].length : 0;
+            const clickable = humanTurn && seat === actingSeat && showFaces;
             return (
               <div className={`tgw-seat ${place} ${!heldTrick && state?.toAct === seat ? 'to-act' : ''}`} data-seat={seat} key={seat}>
                 <div className="tgw-seat-meta">
                   <strong>{name}</strong>
-                  {seat === 0 ? <span>你</span> : null}
+                  {playAll ? (seat === actingSeat && humanTurn ? <span>操作</span> : null) : seat === 0 ? <span>你</span> : null}
                   <span>{state ? `${state.dong[seat]} 棟 · ${state.chips[seat]}` : '—'}</span>
                   {state?.bankerSeat === seat ? <span>莊</span> : null}
                 </div>
                 <div className="tgw-seat-grid">
-                  {seat === 0 || god
+                  {showFaces
                     ? hand.map((id) => (
                       <BoneTile
                         key={id}
                         tile={getTile(id)}
-                        selected={seat === 0 && selected.includes(id)}
-                        onClick={seat === 0 && humanTurn ? () => toggle(id) : undefined}
+                        selected={clickable && selected.includes(id)}
+                        onClick={clickable ? () => toggle(id) : undefined}
                       />
                     ))
                     : Array.from({ length: hiddenCount }, (_, index) => <BoneTile key={`${seat}-back-${index}`} faceDown />)}
@@ -269,7 +296,7 @@ export function LabClient({ god }: { god: boolean }) {
         {state?.toasts[0] ? <div className="tgw-toast" role="status">{formatPublic(`${state.toasts[0].title} · ${state.toasts[0].detail}`)}</div> : null}
 
         <div className="tgw-hand">
-          <p className="tgw-kicker">你的手牌 · {selectedCombo ? selectedCombo.label : '點牌組成一套'}</p>
+          <p className="tgw-kicker">{playAll ? `${SEAT_WIND[actingSeat]}手牌` : '你的手牌'} · {selectedCombo ? selectedCombo.label : '點牌組成一套'}</p>
           {playHint ? <p className="tgw-play-hint">{playHint}</p> : null}
           <div className="tgw-picker">
             {state?.phase === 'example' && legal.some((move) => move.type === 'claimExample') ? (

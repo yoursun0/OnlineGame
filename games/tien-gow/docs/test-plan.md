@@ -82,9 +82,7 @@ http://localhost:3000/lab/tien-gow?god=1&fixture=<id>&play=all
 
 Show **seed**, **fixture id**, **莊**, and **Table** in the lab chrome so a tester can copy them into the log.
 
-**Current lab gap (2026-09-16).** Only `?god=1` works. Seed is internal; 開牌 uses `lab:<timestamp>`; there is no fixture loader, no `cpu=dump`, no `play=all`. Layer A cases can run today. Layer B/C cases are **Blocked** until this contract is implemented. Engine tests already cover the same fixtures.
-
-When implementing the harness, keep fixture data next to the engine (for example `games/tien-gow/src/uat-fixtures.ts`) and match §7 exactly. Next-hand seed must be derived from the previous seed (for example `seed + ':hand-' + n`), not `Date.now()`, so 飛莊 cases replay.
+**Harness (implemented).** `/lab/tien-gow` honours the query contract above. Chrome shows seed, fixture id, 莊, play/cpu mode, and Table. Fixtures live in `games/tien-gow/src/uat-fixtures.ts`. Next-hand seed is `seed + ':hand-' + n`, not `Date.now()`. Unpinned first 開牌 uses seed `lab`; unpinned 重開牌局 advances to `lab:hand-1`. Layer B/C cases are executable.
 
 ### Approach
 
@@ -190,8 +188,8 @@ Do not point this UAT at production or a Vercel preview. Do not use `prototype/i
 - [ ] `bun test games/tien-gow` green (engine oracle)
 - [ ] `bun run dev` serves `/lab/tien-gow`
 - [ ] This plan reviewed; cases below are the script
-- [ ] Lab URL contract implemented, **or** Layer B/C cases explicitly logged as Blocked
-- [ ] Tester can copy seed / fixture from the lab chrome (after harness)
+- [x] Lab URL contract implemented (`god`, `seed`, `banker`, `fixture`, `cpu`, `play`, `examples`)
+- [x] Tester can copy seed / fixture from the lab chrome
 
 ## 5. Exit criteria
 
@@ -457,8 +455,6 @@ Record **URL**, **seed or fixture**, **Actual result**, and **Pass/Fail** in §1
 ---
 
 ### 8.2 Seeded shuffle (Layer B)
-
-**Blocked** until `?seed=` and `?banker=` work and 開牌 does not append a timestamp.
 
 #### TC-TGW-020 — Same seed, same deal
 
@@ -847,19 +843,19 @@ Tester:
 |  | UAT tester |  |
 |  | Game owner |  |
 
-**Conditions**: Layer B/C Blocked until the URL contract in §1 is implemented is an acceptable prototype log state only if engine tests remain green and Layer A passed.
+**Conditions**: none beyond open defects in the log.
 
 ---
 
-## 13. Implementation notes (for the next slice)
-
-Not UAT steps. The smallest harness that unblocks this plan:
-
-1. Read `god`, `seed`, `banker`, `fixture`, `cpu`, `play`, `examples` from the lab page search params.
-2. Stop using `Date.now()` on 開牌 / 下一局 when a seed is pinned.
-3. Export the §7 fixtures from the engine package; `createHand({ seed, bankerSeat, table, hands })`.
-4. `cpu=dump`: in the CPU timer, if `phase === 'follow'`, apply a legal 墊 instead of `nextCpuMove`.
-5. `play=all`: disable the CPU timer; make the `toAct` hand clickable (god already shows faces).
-6. Render seed / fixture / 莊 in the header.
+## 13. Harness map
 
 Engine tests stay the oracle. Browser cases in this plan are acceptance that the lab shows the same facts.
+
+| Contract | Where |
+| --- | --- |
+| Query parse / deal | `games/tien-gow/src/lab-query.ts` |
+| Fixtures | `games/tien-gow/src/uat-fixtures.ts` |
+| Next-hand seed | `nextHandSeed` in `deal.ts` |
+| `cpu=dump` | `dumpFollowMove` / `nextLabCpuMove` |
+| Lab UI | `app/lab/tien-gow/lab-client.tsx` |
+| Browser smoke | `uv run --with playwright python games/tien-gow/docs/lab-harness-check.py` (needs `bun run dev`) |

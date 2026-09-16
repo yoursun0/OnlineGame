@@ -28,6 +28,8 @@ body:has(.tgw-lab) { background: #140c09; }
 .tgw-kicker { margin: 0 0 6px; color: var(--brass); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
 .tgw-lab h1 { margin: 0; font-family: var(--display); font-size: clamp(32px, 5vw, 54px); letter-spacing: .04em; }
 .tgw-lab h1 em { color: var(--cinnabar); font-style: normal; }
+.tgw-harness { margin: 6px 0 0; color: var(--tea); font-size: 12px; letter-spacing: .03em; line-height: 1.45; }
+.tgw-harness-error { margin: 4px 0 0; color: var(--cinnabar); font-size: 12px; }
 .tgw-top a { color: var(--mist); font-size: 13px; }
 .tgw-table-card, .tgw-board, .tgw-hand, .tgw-log, .tgw-recap {
   border: 1px solid rgba(208, 168, 90, .28);

@@ -79,6 +79,7 @@ No search.
 - Combination picker from selected tiles
 - Public log; 賀 toast; 結 recap
 - After a human move, apply `nextCpuMove` in a loop until the human to play
+- UAT URL contract (`games/tien-gow/docs/test-plan.md`): `god`, `seed`, `banker`, `fixture`, `cpu=dump`, `play=all`, `examples`. 開牌 / 下一局 must not use `Date.now()` when a seed or fixture is pinned.
 
 Rematch: chips 100, same seats and Table.
 

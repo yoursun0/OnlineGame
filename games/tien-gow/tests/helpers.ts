@@ -1,6 +1,9 @@
 import { expect } from 'bun:test';
-import { applyMove, listLegalMoves, validateMove, type Move, type State } from '../src/reducer';
-import { DECK, type TileId } from '../src/tiles';
+import { applyMove, validateMove, type Move, type State } from '../src/reducer';
+import { type TileId } from '../src/tiles';
+import { fillHands } from '../src/uat-fixtures';
+
+export { fillHands };
 
 export const PLAY_TABLE = {
   examples: false,
@@ -14,20 +17,6 @@ export const PLAY_TABLE = {
   baoHonorAlsoHe: false,
   extraExamples: false,
 } as const;
-
-export function fillHands(partial: Array<readonly TileId[] | undefined>): TileId[][] {
-  const used = new Set(partial.flatMap((hand) => hand ?? []));
-  const rest = DECK.map((tile) => tile.id).filter((id) => !used.has(id));
-  return [0, 1, 2, 3].map((seat) => {
-    const given = [...(partial[seat] ?? [])];
-    while (given.length < 8) {
-      const next = rest.shift();
-      if (!next) throw new Error('Ran out of tiles while filling hands.');
-      given.push(next);
-    }
-    return given;
-  });
-}
 
 export function act(state: State, move: Move, seat = state.toAct): State {
   const result = validateMove(state, move, seat);

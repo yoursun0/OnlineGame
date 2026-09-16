@@ -2,12 +2,28 @@ import { comboBeats, enumerateCombos, identifyCombo, isGaojiaoPair } from './com
 import {
   listLegalMoves,
   mustDumpLastSingleton,
+  sameMove,
   type Move,
   type State,
 } from './reducer';
 import { getTile, sortTileIds, type TileId } from './tiles';
 
 type TileMove = Extract<Move, { tiles: TileId[] }>;
+
+export function dumpFollowMove(state: State, seat: number): Move | null {
+  if (state.phase !== 'follow') return null;
+  const dumps = listLegalMoves(state, seat).filter((move): move is TileMove => move.type === 'dump');
+  if (dumps.length === 0) return null;
+  const size = state.trick?.combo?.tiles.length;
+  if (!size) return dumps[0];
+  const tiles = sortTileIds(state.hands[seat].slice(-size));
+  return dumps.find((move) => sameMove(move, { type: 'dump', tiles })) ?? dumps[0];
+}
+
+export function nextLabCpuMove(state: State, seat: number, cpu: 'auto' | 'dump'): Move | null {
+  if (cpu === 'dump' && state.phase === 'follow') return dumpFollowMove(state, seat);
+  return nextCpuMove(state, seat);
+}
 
 export function nextCpuMove(state: State, seat: number): Move | null {
   const legal = listLegalMoves(state, seat);

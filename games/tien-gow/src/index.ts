@@ -1,7 +1,18 @@
 export { tienGow } from './adapter';
 export { comboBeats, enumerateCombos, identifyCombo, isGaojiaoPair, CLASS_LABEL, type Combo, type ComboClass, type Family } from './combinations';
-export { nextCpuMove } from './cpu';
-export { dealHands, hashSeed, randomBankerSeat } from './deal';
+export { dumpFollowMove, nextCpuMove, nextLabCpuMove } from './cpu';
+export { dealHands, hashSeed, nextHandSeed, randomBankerSeat } from './deal';
+export {
+  dealLabHand,
+  initialLabSeed,
+  initialLabTable,
+  parseLabQuery,
+  type LabCpuMode,
+  type LabDeal,
+  type LabDealKind,
+  type LabPlayMode,
+  type LabQuery,
+} from './lab-query';
 export { bestExample, findExamples, type ExampleName, type ExamplePattern } from './examples';
 export {
   applyMove,
@@ -42,4 +53,5 @@ export {
   type Tile,
   type TileId,
 } from './tiles';
+export { fillHands, getUatFixture, UAT_FIXTURE_IDS, type UatFixture, type UatFixtureId } from './uat-fixtures';
 export { projectView, type View, type ViewPlay } from './view';

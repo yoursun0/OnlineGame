@@ -37,3 +37,9 @@ export function dealHands(seed: string): TileId[][] {
 export function randomBankerSeat(seed: string): number {
   return hashSeed(`banker:${seed}`) % 4;
 }
+
+export function nextHandSeed(seed: string): string {
+  const match = /^(.*):hand-(\d+)$/.exec(seed);
+  if (match) return `${match[1]}:hand-${Number(match[2]) + 1}`;
+  return `${seed}:hand-1`;
+}
