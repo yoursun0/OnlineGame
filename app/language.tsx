@@ -41,6 +41,16 @@ const errorTranslations: Record<string, string> = {
   'Replay is only available after the game ends.': '遊戲結束後才能重玩。',
   'Both players must still be in the room to replay.': '兩位玩家都還在房間裡才能重玩。',
   'A replay needs a fresh game state.': '重玩需要新的棋局狀態。',
+  'Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.': '請輸入類似 TIK-7Q4、CON-K8P 或 LAD-ZHW 的房號。',
+  '小朋友落樓梯 is realtime only.': '小朋友落樓梯只支援即時模式。',
+  'Only the host simulator may write Checkpoints.': '只有房主模擬器可以寫入 Checkpoint。',
+  'Checkpoint shape is invalid.': 'Checkpoint 格式無效。',
+  'This room is not a downstairs well.': '這個房間不是落樓梯井。',
+  'Solo LAD rooms are the only downstairs start supported in this release.': '此版本只支援單人 LAD 開局。',
+  'Could not save well Checkpoint.': '未能保存井況 Checkpoint。',
+  'Could not quit well.': '未能退出井況。',
+  'All players must be ready before starting.': '所有玩家都要準備好才能開始。',
+  'Finish reason must be hp, fall, or quit.': '結束原因必須是生命、墜落或退出。',
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {

@@ -77,4 +77,14 @@ export const GAME_CATALOG: readonly GameCatalogEntry[] = [
     supports: ['turn_based'],
     available: true,
   },
+  {
+    slug: 'downstairs',
+    title: '小朋友落樓梯',
+    shortDescription: 'Fall the shaft, dodge traps, and keep your life gauge off zero.',
+    roomPrefix: 'LAD',
+    players: { min: 1, max: 4 },
+    estimatedMinutes: 8,
+    supports: ['realtime'],
+    available: true,
+  },
 ];

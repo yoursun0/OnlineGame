@@ -17,18 +17,26 @@ async function callRoomApi(path: string, body: unknown) {
   return payload as { code: string };
 }
 
+function modeForSlug(gameSlug: string) {
+  return gameSlug === 'downstairs' ? 'realtime' : 'turn_based';
+}
+
 export function CreateRoomButton({ gameSlug }: { gameSlug: string }) {
   const { language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const mode = modeForSlug(gameSlug);
+  const modeLabel = mode === 'realtime'
+    ? (language === 'en' ? 'Real-time' : '即時模式')
+    : (language === 'en' ? 'Turn-based' : '回合制');
 
   async function createRoom(event: FormEvent) {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      const result = await callRoomApi('/api/rooms', { gameSlug, mode: 'turn_based', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
+      const result = await callRoomApi('/api/rooms', { gameSlug, mode, displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${result.code}`);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not create room.', language)); setBusy(false); }
   }
@@ -36,7 +44,7 @@ export function CreateRoomButton({ gameSlug }: { gameSlug: string }) {
   if (!open) return <button className="card-cta card-cta-button" type="button" onClick={() => setOpen(true)}>{language === 'en' ? 'Create room' : '建立房間'} <span>→</span></button>;
   return <form className="room-form" onSubmit={createRoom}>
     <label><span>{language === 'en' ? 'Display name' : '顯示名稱'}</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder={language === 'en' ? 'Guest' : '訪客'} /></label>
-    <label><span>{language === 'en' ? 'Mode' : '模式'}</span><select value="turn_based" disabled><option value="turn_based">{language === 'en' ? 'Turn-based' : '回合制'}</option></select></label>
+    <label><span>{language === 'en' ? 'Mode' : '模式'}</span><select value={mode} disabled><option value={mode}>{modeLabel}</option></select></label>
     {error && <p className="form-error">{error}</p>}
     <button className="button button-dark form-submit" disabled={busy} type="submit">{busy ? (language === 'en' ? 'Creating…' : '建立中…') : (language === 'en' ? 'Create room →' : '建立房間 →')}</button>
   </form>;
@@ -53,7 +61,11 @@ export function JoinRoomForm() {
     event.preventDefault();
     setBusy(true); setError('');
     const normalized = code.trim().toUpperCase();
-    if (!/^(TIK|CON)-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) { setError(language === 'en' ? 'Use a code like TIK-7Q4 or CON-K8P.' : '請輸入類似 TIK-7Q4 或 CON-K8P 的房號。'); setBusy(false); return; }
+    if (!/^(TIK|CON|LAD)-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) {
+      setError(language === 'en' ? 'Use a code like TIK-7Q4, CON-K8P, or LAD-ZHW.' : '請輸入類似 TIK-7Q4、CON-K8P 或 LAD-ZHW 的房號。');
+      setBusy(false);
+      return;
+    }
     try {
       await callRoomApi(`/api/rooms/${normalized}`, { action: 'join', displayName: displayName || (language === 'en' ? 'Guest' : '訪客') });
       window.location.assign(`/room/${normalized}`);

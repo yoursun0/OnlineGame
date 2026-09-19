@@ -6,6 +6,7 @@
       "name": "onlinegame",
       "dependencies": {
         "@playroom/connect-four": "workspace:*",
+        "@playroom/downstairs": "workspace:*",
         "@playroom/game-core": "workspace:*",
         "@playroom/tic-tac-toe": "workspace:*",
         "@supabase/supabase-js": "^2.115.0",
@@ -24,6 +25,13 @@
     },
     "games/connect-four": {
       "name": "@playroom/connect-four",
+      "version": "0.1.0",
+      "dependencies": {
+        "@playroom/game-core": "workspace:*",
+      },
+    },
+    "games/downstairs": {
+      "name": "@playroom/downstairs",
       "version": "0.1.0",
       "dependencies": {
         "@playroom/game-core": "workspace:*",
@@ -319,6 +327,8 @@
     "@oxc-transform/binding-win32-x64-msvc": ["@oxc-transform/binding-win32-x64-msvc@0.111.0", "", { "os": "win32", "cpu": "x64" }, "sha512-QddKW4kBH0Wof6Y65eYCNHM4iOGmCTWLLcNYY1FGswhzmTYOUVXajNROR+iCXAOFnOF0ldtsR79SyqgyHH1Bgg=="],
 
     "@playroom/connect-four": ["@playroom/connect-four@workspace:games/connect-four"],
+
+    "@playroom/downstairs": ["@playroom/downstairs@workspace:games/downstairs"],
 
     "@playroom/game-core": ["@playroom/game-core@workspace:packages/game-core"],
 
