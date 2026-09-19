@@ -4,6 +4,6 @@
 - Room prefix: `LAD`
 - Players: 1–4 (no CPU)
 - Mode: realtime only
-- Status: Solo well playable in PLAYROOM (`LAD`). Shared well: issues 11–13.
+- Status: Solo and 2-player Shared wells playable in PLAYROOM (`LAD`). 3–4 kids: issue 12. Host leave/resume: issue 13.
 
 See `rules.md` and the local `AGENTS.md` before changing the game contract. Feel reference: `prototype/`.

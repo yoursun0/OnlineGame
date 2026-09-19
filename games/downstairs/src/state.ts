@@ -12,11 +12,16 @@ export const DOWNSTAIRS_SLUG = 'downstairs';
 
 export type DownstairsRoomPhase = 'lobby' | 'playing' | 'finished';
 
+export type DownstairsResult = {
+  reason: WellFinishReason;
+  winnerGuestId?: string | null;
+};
+
 export type DownstairsRoomState = {
   kind: 'well';
   phase: DownstairsRoomPhase;
   checkpoint: WellCheckpoint | null;
-  result?: { reason: WellFinishReason };
+  result?: DownstairsResult;
 };
 
 export type RestorableKid = WellKid & {
@@ -64,8 +69,11 @@ export function isDownstairsRoomState(value: unknown): value is DownstairsRoomSt
   if (record.checkpoint !== null && !isWellCheckpoint(record.checkpoint)) return false;
   if (record.result !== undefined) {
     if (typeof record.result !== 'object' || record.result === null) return false;
-    const reason = (record.result as { reason?: unknown }).reason;
-    if (reason !== 'hp' && reason !== 'fall' && reason !== 'quit') return false;
+    const result = record.result as { reason?: unknown; winnerGuestId?: unknown };
+    if (result.reason !== 'hp' && result.reason !== 'fall' && result.reason !== 'quit') return false;
+    if (result.winnerGuestId !== undefined && result.winnerGuestId !== null && typeof result.winnerGuestId !== 'string') {
+      return false;
+    }
   }
   return true;
 }
@@ -74,8 +82,17 @@ export function playingState(checkpoint: WellCheckpoint): DownstairsRoomState {
   return { kind: 'well', phase: 'playing', checkpoint };
 }
 
-export function finishedState(checkpoint: WellCheckpoint, reason: WellFinishReason): DownstairsRoomState {
-  return { kind: 'well', phase: 'finished', checkpoint, result: { reason } };
+export function finishedState(
+  checkpoint: WellCheckpoint,
+  reason: WellFinishReason,
+  winnerGuestId?: string | null,
+): DownstairsRoomState {
+  return {
+    kind: 'well',
+    phase: 'finished',
+    checkpoint,
+    result: winnerGuestId === undefined ? { reason } : { reason, winnerGuestId },
+  };
 }
 
 export function checkpointFromWell(seq: number, well: WellState): WellCheckpoint {

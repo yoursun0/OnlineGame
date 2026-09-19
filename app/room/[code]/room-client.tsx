@@ -55,22 +55,22 @@ export function RoomClient({ code }: { code: string }) {
     game: isDownstairs ? '小朋友落樓梯' : isConnect ? 'Connect Four' : 'Tic-tac-toe',
     turnBased: 'Turn-based', realTime: 'Real-time',
     players: 'Players', of: 'of', host: 'host', ready: 'Ready', waiting: 'Waiting',
-    unready: 'Unready', imReady: 'I’m ready', start: 'Start game →', startVsCpu: 'Start vs CPU →', startSolo: 'Start solo →',
+    unready: 'Unready', imReady: 'I’m ready', start: 'Start game →', startVsCpu: 'Start vs CPU →', startSolo: 'Start solo →', startShared: 'Start shared well →',
     waitingBoth: isDownstairs ? 'Waiting for players' : 'Waiting for both players', replay: 'Replay', reportRoom: 'Report room', cpu: 'CPU',
     reportReason: 'Optional reason', reported: 'Reported', report: 'Report',
     help: isDownstairs
-      ? 'Start a Solo well alone — no CPU. The host browser runs the well; the server stores Checkpoints for refresh.'
+      ? 'Solo alone, or invite one friend for a Shared well. Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish.'
       : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
     game: isDownstairs ? '小朋友落樓梯' : isConnect ? '四子棋' : '井字過三關',
     turnBased: '回合制', realTime: '即時模式',
     players: '玩家', of: '/', host: '房主', ready: '已準備', waiting: '等待中',
-    unready: '取消準備', imReady: '我準備好了', start: '開始遊戲 →', startVsCpu: '對戰電腦 →', startSolo: '單人開局 →',
+    unready: '取消準備', imReady: '我準備好了', start: '開始遊戲 →', startVsCpu: '對戰電腦 →', startSolo: '單人開局 →', startShared: '開始共用井 →',
     waitingBoth: isDownstairs ? '等待玩家' : '等待兩位玩家準備', replay: '重玩一次', reportRoom: '舉報房間', cpu: '電腦',
     reportReason: '可選填原因', reported: '已舉報', report: '舉報',
     help: isDownstairs
-      ? '可單人即開 Solo 井，沒有電腦對手。房主瀏覽器模擬井況，伺服器只保存 Checkpoint 供重新整理還原。'
+      ? '可單人即開 Solo 井，或邀請一位朋友開 Shared 共用井。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。'
       : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
@@ -143,6 +143,7 @@ export function RoomClient({ code }: { code: string }) {
     guestId,
     members: snapshot.members,
     maxPlayers: snapshot.room.max_players,
+    gameSlug: snapshot.room.game_slug,
   }));
   const ownTurn = Boolean(ownMember && snapshot && isOwnTurn(snapshot.room, ownMember.seat));
   const winnerMessage = snapshot
@@ -158,6 +159,8 @@ export function RoomClient({ code }: { code: string }) {
       ? <DownstairsWell
           roomState={downstairsState}
           roomVersion={snapshot.room.version}
+          roomId={snapshot.room.id}
+          guestId={guestId}
           token={token}
           code={code}
           isHost={snapshot.room.host_guest_id === guestId}
@@ -168,12 +171,12 @@ export function RoomClient({ code }: { code: string }) {
       : isConnect
         ? <ConnectFourBoard state={snapshot.room.state as ConnectFourState} onMove={(column) => void playMove({ column })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
         : <Board state={snapshot.room.state as TicTacToeState} onMove={(cell) => void playMove({ cell })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
-    : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (language === 'en' ? 'Solo well' : '單人井') : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
+    : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
 
   const startLabel = !canStart
     ? text.waitingBoth
     : isDownstairs
-      ? text.startSolo
+      ? (humanCount > 1 ? text.startShared : text.startSolo)
       : humanCount === 1
         ? text.startVsCpu
         : text.start;

@@ -40,3 +40,25 @@ test('only the host can start the room', () => {
     maxPlayers: 2,
   })).toBe(false);
 });
+
+test('a downstairs Shared well can start with 2 ready humans before the room is full', () => {
+  expect(canHostStartRoom({
+    status: 'open',
+    hostGuestId: 'host',
+    guestId: 'host',
+    members: [{ is_ready: true }, { is_ready: true }],
+    maxPlayers: 4,
+    gameSlug: 'downstairs',
+  })).toBe(true);
+});
+
+test('a downstairs room with 3 humans cannot start in this release', () => {
+  expect(canHostStartRoom({
+    status: 'open',
+    hostGuestId: 'host',
+    guestId: 'host',
+    members: [{ is_ready: true }, { is_ready: true }, { is_ready: true }],
+    maxPlayers: 4,
+    gameSlug: 'downstairs',
+  })).toBe(false);
+});

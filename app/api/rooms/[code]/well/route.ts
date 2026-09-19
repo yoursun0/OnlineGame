@@ -26,6 +26,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       action?: string;
       checkpoint?: unknown;
       reason?: string;
+      winnerGuestId?: string | null;
       expectedVersion?: number;
     };
     await enforceRateLimit(admin, guest.id, 'well-checkpoint', getClientIpHash(request), 8, 10);
@@ -59,7 +60,17 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else if (body.action === 'finish') {
       const reason = body.reason as WellFinishReason;
       if (!FINISH_REASONS.includes(reason)) throw new ApiError('Finish reason must be hp, fall, or quit.', 400);
-      const nextState = finishedState(body.checkpoint, reason);
+      const winnerGuestId = body.winnerGuestId === undefined
+        ? undefined
+        : body.winnerGuestId === null
+          ? null
+          : typeof body.winnerGuestId === 'string' && body.winnerGuestId.length > 0
+            ? body.winnerGuestId
+            : undefined;
+      if (body.winnerGuestId !== undefined && winnerGuestId === undefined && body.winnerGuestId !== null) {
+        throw new ApiError('winnerGuestId must be a guest id string or null.', 400);
+      }
+      const nextState = finishedState(body.checkpoint, reason, winnerGuestId);
       const { error } = await admin.rpc('append_game_event', {
         p_room_id: room.id,
         p_guest_id: guest.id,
@@ -67,7 +78,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         p_state: nextState,
         p_status: 'finished',
         p_event_type: 'finish',
-        p_payload: { seq: body.checkpoint.seq, reason },
+        p_payload: { seq: body.checkpoint.seq, reason, winnerGuestId: winnerGuestId ?? null },
       });
       if (error) throw error;
       logRoomLifecycle('finish', { roomCode: normalizedCode, guestId: guest.id, version: expectedVersion + 1, status: 'finished' });
@@ -81,4 +92,3 @@ export async function POST(request: NextRequest, { params }: Params) {
     return errorResponse(error);
   }
 }
-
