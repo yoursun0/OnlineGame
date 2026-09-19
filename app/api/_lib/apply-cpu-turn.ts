@@ -7,6 +7,7 @@ export type CpuRoom = { id: string; status: string; version: number; state: unkn
 export type CpuMember = { guest_id: string; seat: number; is_cpu?: boolean };
 
 function pendingCpuMove(room: CpuRoom, members: CpuMember[]) {
+  if (room.game_slug === 'downstairs') return null;
   if (room.game_slug === 'connect-four') return nextConnectFourMove(room.state as ConnectFourState, members);
   return nextCpuMove(room.state as TicTacToeState, members);
 }

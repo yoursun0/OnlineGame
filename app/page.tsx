@@ -12,8 +12,8 @@ const copy = {
     browse: 'Browse games', joinEyebrow: 'Already have a code?', joinTitle: 'Jump straight in.', radarOpen: 'OPEN ROOMS',
     radarNoLogin: 'NO LOGIN NEEDED', radarReady: 'READY?', radarLabel: 'ROOM RADAR / LIVE', shelfEyebrow: 'Pick a tiny universe',
     shelfTitle: 'Choose your game.', shelfNote: 'Ready in under two minutes', players: 'players', minutes: 'min', turnBased: 'turn-based',
-    ready: 'Ready now', soon: 'Coming soon', ticDescription: 'Three in a row. Quick to learn, surprisingly hard to leave unfinished.',
-    stairsDescription: 'Roll, descend, and avoid the squares you really should not step on.', connectTitle: 'Connect Four',
+    realtime: 'real-time', ready: 'Ready now', soon: 'Coming soon', ticDescription: 'Three in a row. Quick to learn, surprisingly hard to leave unfinished.',
+    stairsDescription: 'Fall the shaft, dodge traps, and keep your life gauge off zero. Solo well ready now.', connectTitle: 'Connect Four',
     connectDescription: 'Four pieces, one clean line, and just enough room for a trap.', workshop: 'In the workshop', wishlist: 'Next on the shelf',
     howEyebrow: 'The tiny ritual', howTitle: 'Three steps. No ceremony.', stepOneTitle: 'Pick a game',
     stepOneBody: 'See the player count, play time, and supported mode before you start.', stepTwoTitle: 'Create or join',
@@ -26,8 +26,8 @@ const copy = {
     hero: '一個短房號，兩位玩家，零張註冊表格。揀好遊戲、開個房，再把房號傳給朋友。',
     browse: '睇下玩咩', joinEyebrow: '已經有房號？', joinTitle: '直接入房。', radarOpen: '開放房間', radarNoLogin: '無需登入',
     radarReady: '準備好？', radarLabel: '房間雷達 / LIVE', shelfEyebrow: '揀一個小宇宙', shelfTitle: '揀隻遊戲先。',
-    shelfNote: '兩分鐘內開局', players: '位玩家', minutes: '分鐘', turnBased: '回合制', ready: '可以開局', soon: '即將推出',
-    ticDescription: '三格連線。規則簡單，但未必容易贏，也很難中途停手。', stairsDescription: '擲骰、落樓梯，避開那些你真的不應該踩到的格子。',
+    shelfNote: '兩分鐘內開局', players: '位玩家', minutes: '分鐘', turnBased: '回合制', realtime: '即時模式', ready: '可以開局', soon: '即將推出',
+    ticDescription: '三格連線。規則簡單，但未必容易贏，也很難中途停手。', stairsDescription: '墜入井中、避開陷阱，別讓生命歸零。單人井現已可玩。',
     connectTitle: '四子棋', connectDescription: '四粒棋連成一線，棋盤不大，剛好放得下一個陷阱。', workshop: '製作中', wishlist: '下一款遊戲',
     howEyebrow: '簡單開局流程', howTitle: '三步，唔使諗太多。', stepOneTitle: '揀遊戲', stepOneBody: '開局前先看清楚玩家人數、遊戲時間和支援模式。',
     stepTwoTitle: '開房或入房', stepTwoBody: '分享一個短房號，毋須電郵、密碼或永久帳戶。', stepThreeTitle: '準備，開局',
@@ -35,6 +35,34 @@ const copy = {
     footerPrivacy: '預設匿名 · 使用臨時訪客工作階段',
   },
 } as const;
+
+function cardMeta(slug: string, language: 'en' | 'zh-Hant', text: (typeof copy)['en'] | (typeof copy)['zh-Hant']) {
+  if (slug === 'connect-four') {
+    return {
+      className: 'game-card game-card-connect',
+      title: language === 'en' ? 'Connect Four' : '四子棋',
+      description: text.connectDescription,
+      icon: '⬤⬤',
+      mode: text.turnBased,
+    };
+  }
+  if (slug === 'downstairs') {
+    return {
+      className: 'game-card game-card-stairs',
+      title: '小朋友落樓梯',
+      description: text.stairsDescription,
+      icon: '⇧',
+      mode: text.realtime,
+    };
+  }
+  return {
+    className: 'game-card game-card-featured',
+    title: language === 'en' ? 'Tic-tac-toe' : '井字過三關',
+    description: text.ticDescription,
+    icon: '✕◯',
+    mode: text.turnBased,
+  };
+}
 
 export default function HomePage() {
   const { language } = useLanguage();
@@ -69,25 +97,20 @@ export default function HomePage() {
       <section className="catalogue" id="games" aria-labelledby="games-title">
         <div className="section-heading"><div><p className="eyebrow">{text.shelfEyebrow}</p><h2 id="games-title">{text.shelfTitle}</h2></div><span className="shelf-count">{text.shelfNote}</span></div>
         <div className="game-grid">
-          {GAME_CATALOG.map((game) => {
-            const isConnect = game.slug === 'connect-four';
-            const title = language === 'en' ? game.title : isConnect ? '四子棋' : '井字過三關';
+          {GAME_CATALOG.filter((game) => game.available).map((game) => {
+            const meta = cardMeta(game.slug, language, text);
+            const playerLabel = game.players.min === game.players.max
+              ? `${game.players.min}`
+              : `${game.players.min}–${game.players.max}`;
             return (
-              <article className={`game-card ${isConnect ? 'game-card-connect' : 'game-card-featured'}`} key={game.slug}>
-                <div className="card-topline"><span className="game-prefix">{game.roomPrefix} · {game.players.min} {text.players} · {game.estimatedMinutes} {text.minutes}</span><span className="status-dot">{text.ready}</span></div>
-                <div className="game-icon" aria-hidden="true">{isConnect ? '⬤⬤' : '✕◯'}</div>
-                <div className="card-content"><h3>{title}</h3><p>{isConnect ? text.connectDescription : text.ticDescription}</p></div>
-                <div className="game-bottom"><span>{text.turnBased}</span><span>{text.ready}</span></div><CreateRoomButton gameSlug={game.slug} />
+              <article className={meta.className} key={game.slug}>
+                <div className="card-topline"><span className="game-prefix">{game.roomPrefix} · {playerLabel} {text.players} · {game.estimatedMinutes} {text.minutes}</span><span className="status-dot">{text.ready}</span></div>
+                <div className="game-icon" aria-hidden="true">{meta.icon}</div>
+                <div className="card-content"><h3>{meta.title}</h3><p>{meta.description}</p></div>
+                <div className="game-bottom"><span>{meta.mode}</span><span>{text.ready}</span></div><CreateRoomButton gameSlug={game.slug} />
               </article>
             );
           })}
-          <article className="game-card game-card-stairs" aria-disabled="true">
-            <div className="card-topline"><span className="game-prefix">LAD · 2–4 {text.players} · 5–10 {text.minutes}</span><span className="status-muted">{text.soon}</span></div>
-            <div className="game-icon" aria-hidden="true">⇧</div>
-            <div className="card-content"><h3>小朋友落樓梯</h3><p>{text.stairsDescription}</p></div>
-            <div className="game-bottom"><span>{text.turnBased}</span><span>{text.workshop}</span></div>
-          </article>
-
         </div>
       </section>
 
