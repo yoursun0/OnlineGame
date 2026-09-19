@@ -22,6 +22,7 @@ import {
   type PlayMode,
   type PlayerId,
   isVersus,
+  playModeForCount,
   playerCount,
   scrollSpeed,
   spikeChance,
@@ -107,6 +108,8 @@ export class Engine {
   winner: PlayerId | null = null;
   touch: (-1 | 0 | 1)[] = [0, 0, 0, 0];
   keys = new Set<string>();
+  /** When true, dirs come from setIntent (online Shared well), not local hot-seat keys. */
+  intentDriven = false;
   private nextId = 1;
   private lastY = 0;
   private events: { land: boolean; hurt: boolean; spring: boolean; death: boolean } = {
@@ -146,24 +149,40 @@ export class Engine {
     this.players.forEach((p) => {
       p.onFloor = base;
     });
+    this.intentDriven = n > 1;
   }
 
   /** Solo host intent: left / right / none. */
   setSoloIntent(direction: 'left' | 'right' | 'none') {
     const p = this.players[0];
+    if (p) this.setIntent(p.guestId, direction);
+  }
+
+  /** Apply a guest Intent to that kid. Shared wells use this instead of hot-seat keys. */
+  setIntent(guestId: string, direction: 'left' | 'right' | 'none') {
+    const p = this.players.find((player) => player.guestId === guestId);
     if (!p || !p.alive) return;
     if (direction === 'left') {
       p.dir = -1;
       p.facing = -1;
-      this.touch[0] = -1;
+      this.touch[p.id] = -1;
     } else if (direction === 'right') {
       p.dir = 1;
       p.facing = 1;
-      this.touch[0] = 1;
+      this.touch[p.id] = 1;
     } else {
       p.dir = 0;
-      this.touch[0] = 0;
+      this.touch[p.id] = 0;
     }
+  }
+
+  /** Non-host left the well. Last kid standing may win. */
+  leaveKid(guestId: string) {
+    const p = this.players.find((player) => player.guestId === guestId);
+    if (!p || !p.alive) return false;
+    this.kill(p, 'hp');
+    this.checkOver();
+    return true;
   }
 
   quit() {
@@ -289,6 +308,7 @@ export class Engine {
   }
 
   private readInput() {
+    if (this.intentDriven) return;
     const p = this.players;
     this.setDir(
       p[0],
@@ -704,14 +724,16 @@ export class Engine {
     };
   }
 
-  restoreFromWell(well: RestorableWell, cfg: EngineConfig = {
-    mode: 'solo',
-    difficulty: 'normal',
-    traps: { conveyor: true, spring: true, fragile: true },
-  }) {
-    this.mode = cfg.mode;
-    this.difficulty = cfg.difficulty;
-    this.traps = cfg.traps;
+  restoreFromWell(well: RestorableWell, cfg?: EngineConfig) {
+    const resolved: EngineConfig = cfg ?? {
+      mode: playModeForCount(well.kids.length),
+      difficulty: 'normal',
+      traps: { conveyor: true, spring: true, fragile: true },
+    };
+    this.mode = resolved.mode;
+    this.difficulty = resolved.difficulty;
+    this.traps = resolved.traps;
+    this.intentDriven = well.kids.length > 1;
     this.time = well.clock;
     this.depth = well.depth ?? 0;
     this.floorIndex = well.floorIndex ?? well.stairs.length;
