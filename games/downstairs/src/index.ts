@@ -45,6 +45,14 @@ export type {
   WellFinishReason,
 } from './constants';
 
+export {
+  guestWellRefreshOutcome,
+  isPlayingWellWithCheckpoint,
+  nonHostMayDeclareHostLeft,
+  shouldPersistHostLeftOnUnload,
+} from './leave';
+export type { GuestWellRefreshOutcome } from './leave';
+
 export { Engine } from './engine';
 export type { EngineConfig, Floor, Actor, TrapFlags } from './engine';
 export { renderWell } from './render';

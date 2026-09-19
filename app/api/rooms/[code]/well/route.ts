@@ -3,6 +3,8 @@ import { isWellCheckpoint } from '@playroom/game-core';
 import {
   DOWNSTAIRS_SLUG,
   finishedState,
+  isDownstairsRoomState,
+  nonHostMayDeclareHostLeft,
   playingState,
   type WellFinishReason,
 } from '@playroom/downstairs';
@@ -13,7 +15,7 @@ import { isPlayroomRoomCode } from '../../../../room-code';
 
 type Params = { params: Promise<{ code: string }> };
 
-const FINISH_REASONS: readonly WellFinishReason[] = ['hp', 'fall', 'quit'];
+const FINISH_REASONS: readonly WellFinishReason[] = ['hp', 'fall', 'quit', 'host_left'];
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
@@ -33,19 +35,32 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const { room, members } = await getRoomSnapshot(normalizedCode, guest.id);
     if (room.game_slug !== DOWNSTAIRS_SLUG) throw new ApiError('This room is not a downstairs well.', 400);
-    if (room.host_guest_id !== guest.id) throw new ApiError('Only the host simulator may write Checkpoints.', 403);
     if (!members.some((member) => member.guest_id === guest.id)) throw new Error('You are not a member of this room.');
     if (room.status !== 'playing') {
       throw new Error('The game has not started or is already finished.');
     }
-    if (!isWellCheckpoint(body.checkpoint)) throw new ApiError('Checkpoint shape is invalid.', 400);
+
+    const isHost = room.host_guest_id === guest.id;
+    const declaringHostLeft = body.action === 'finish' && nonHostMayDeclareHostLeft(String(body.reason ?? ''));
+    if (!isHost && !declaringHostLeft) {
+      throw new ApiError('Only the host simulator may write Checkpoints.', 403);
+    }
+
+    let checkpoint = body.checkpoint;
+    if (declaringHostLeft && !isWellCheckpoint(checkpoint)) {
+      if (!isDownstairsRoomState(room.state) || !room.state.checkpoint) {
+        throw new ApiError('Checkpoint shape is invalid.', 400);
+      }
+      checkpoint = room.state.checkpoint;
+    }
+    if (!isWellCheckpoint(checkpoint)) throw new ApiError('Checkpoint shape is invalid.', 400);
 
     const expectedVersion = body.expectedVersion ?? room.version;
     if (!Number.isInteger(expectedVersion) || expectedVersion < 0) throw new ApiError('Invalid room version.', 400);
 
     if (body.action === 'checkpoint') {
-      if (room.status !== 'playing') throw new Error('The game has not started or is already finished.');
-      const nextState = playingState(body.checkpoint);
+      if (!isHost) throw new ApiError('Only the host simulator may write Checkpoints.', 403);
+      const nextState = playingState(checkpoint);
       const { error } = await admin.rpc('append_game_event', {
         p_room_id: room.id,
         p_guest_id: guest.id,
@@ -53,15 +68,20 @@ export async function POST(request: NextRequest, { params }: Params) {
         p_state: nextState,
         p_status: 'playing',
         p_event_type: 'checkpoint',
-        p_payload: { seq: body.checkpoint.seq },
+        p_payload: { seq: checkpoint.seq },
       });
       if (error) throw error;
       logRoomLifecycle('checkpoint', { roomCode: normalizedCode, guestId: guest.id, version: expectedVersion + 1, status: 'playing' });
     } else if (body.action === 'finish') {
       const reason = body.reason as WellFinishReason;
-      if (!FINISH_REASONS.includes(reason)) throw new ApiError('Finish reason must be hp, fall, or quit.', 400);
+      if (!FINISH_REASONS.includes(reason)) {
+        throw new ApiError('Finish reason must be hp, fall, quit, or host_left.', 400);
+      }
+      if (!isHost && reason !== 'host_left') {
+        throw new ApiError('Only the host simulator may write Checkpoints.', 403);
+      }
       const winnerGuestId = body.winnerGuestId === undefined
-        ? undefined
+        ? (reason === 'host_left' ? null : undefined)
         : body.winnerGuestId === null
           ? null
           : typeof body.winnerGuestId === 'string' && body.winnerGuestId.length > 0
@@ -70,7 +90,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (body.winnerGuestId !== undefined && winnerGuestId === undefined && body.winnerGuestId !== null) {
         throw new ApiError('winnerGuestId must be a guest id string or null.', 400);
       }
-      const nextState = finishedState(body.checkpoint, reason, winnerGuestId);
+      const nextState = finishedState(checkpoint, reason, winnerGuestId);
       const { error } = await admin.rpc('append_game_event', {
         p_room_id: room.id,
         p_guest_id: guest.id,
@@ -78,7 +98,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         p_state: nextState,
         p_status: 'finished',
         p_event_type: 'finish',
-        p_payload: { seq: body.checkpoint.seq, reason, winnerGuestId: winnerGuestId ?? null },
+        p_payload: { seq: checkpoint.seq, reason, winnerGuestId: winnerGuestId ?? null },
       });
       if (error) throw error;
       logRoomLifecycle('finish', { roomCode: normalizedCode, guestId: guest.id, version: expectedVersion + 1, status: 'finished' });

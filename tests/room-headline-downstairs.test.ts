@@ -67,3 +67,18 @@ test('a downstairs waiting room with three humans still names Shared', () => {
     gameSlug: 'downstairs',
   })).toBe('Waiting room — Shared well when ready');
 });
+
+test('a finished downstairs well names host left', () => {
+  const start = createSharedStartState(['host', 'guest']);
+  const finished = finishedState(start.checkpoint!, 'host_left', null);
+  expect(roomHeadline({
+    status: 'finished',
+    state: finished,
+    members: [
+      { seat: 0, display_name: 'Host', guest_id: 'host' },
+      { seat: 1, display_name: 'Guest', guest_id: 'guest' },
+    ],
+    language: 'en',
+    gameSlug: 'downstairs',
+  })).toBe('Game complete — host left');
+});

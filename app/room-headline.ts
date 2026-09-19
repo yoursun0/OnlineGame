@@ -61,10 +61,12 @@ export function roomHeadline(input: {
       return zh ? 'Solo 井進行中' : 'Solo well in play';
     }
     if (input.status === 'finished') {
+      const reason = state.result?.reason;
+      // host_left / quit are terminal outcomes even when winnerGuestId is null.
+      if (reason === 'host_left') return zh ? '遊戲結束 — 房主已離開' : 'Game complete — host left';
+      if (reason === 'quit') return zh ? '遊戲結束 — 已退出' : 'Game complete — quit';
       const winnerLabel = downstairsWinnerLabel(input.members, state.result?.winnerGuestId, zh);
       if (winnerLabel) return winnerLabel;
-      const reason = state.result?.reason;
-      if (reason === 'quit') return zh ? '遊戲結束 — 已退出' : 'Game complete — quit';
       if (reason === 'fall') return zh ? '遊戲結束 — 跌出井外' : 'Game complete — fell out';
       if (reason === 'hp') return zh ? '遊戲結束 — 生命歸零' : 'Game complete — out of life';
       return zh ? '遊戲結束' : 'Game complete';

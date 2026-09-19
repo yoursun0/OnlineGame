@@ -54,6 +54,8 @@ const errorTranslations: Record<string, string> = {
   'Could not quit well.': '未能退出井況。',
   'All players must be ready before starting.': '所有玩家都要準備好才能開始。',
   'Finish reason must be hp, fall, or quit.': '結束原因必須是生命、墜落或退出。',
+  'Finish reason must be hp, fall, quit, or host_left.': '結束原因必須是生命、墜落、退出或房主離開。',
+  'Could not end well after host left.': '房主離開後未能結束井況。',
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {

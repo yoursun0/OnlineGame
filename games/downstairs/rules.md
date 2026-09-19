@@ -13,8 +13,8 @@ This is the source of truth for PLAYROOM 小朋友落樓梯 (Downstairs). v1 is 
 - A kid dies at 0 life or by falling off the well.
 - Solo well: play until that kid dies. Shared well (2–4): last kid standing wins.
 - After the host starts, further joins are rejected. No late spawn.
-- If the host simulator leaves mid-fall, the well ends for everyone. v1 does not pass the simulator to another guest.
-- A non-host who refreshes resumes from the last Checkpoint if one exists; otherwise they are out. A Solo host refresh restores the Checkpoint or the finished result.
+- If the host simulator leaves mid-fall, the well ends for everyone with finish reason `host_left`. v1 does not pass the simulator to another guest. Detection: explicit Leave (server finishes then host exits), Shared host `pagehide` keepalive, or guest Presence drop of the host after grace.
+- A non-host who refreshes resumes from the last Checkpoint if one exists; otherwise they are out. Finished wells still show the result after refresh. A Solo host refresh restores the Checkpoint or the finished result (does not write `host_left`).
 - v1 trusts the host simulator for positions and deaths. The server checks membership, payload size, and Checkpoint shape.
 - Clients must not use WebRTC or the turn-based move endpoint for this game.
 

@@ -70,7 +70,7 @@ export function isDownstairsRoomState(value: unknown): value is DownstairsRoomSt
   if (record.result !== undefined) {
     if (typeof record.result !== 'object' || record.result === null) return false;
     const result = record.result as { reason?: unknown; winnerGuestId?: unknown };
-    if (result.reason !== 'hp' && result.reason !== 'fall' && result.reason !== 'quit') return false;
+    if (result.reason !== 'hp' && result.reason !== 'fall' && result.reason !== 'quit' && result.reason !== 'host_left') return false;
     if (result.winnerGuestId !== undefined && result.winnerGuestId !== null && typeof result.winnerGuestId !== 'string') {
       return false;
     }
