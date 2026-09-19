@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectFour } from '@playroom/connect-four';
+import { createSoloStartState, DOWNSTAIRS_SLUG } from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     const normalizedCode = code.toUpperCase();
-    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4 or CON-K8P.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.', 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const { error: expiryError } = await admin.rpc('expire_idle_rooms', { p_now: new Date().toISOString() });
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     normalizedCode = code.toUpperCase();
-    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4 or CON-K8P.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.', 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean };
@@ -73,6 +74,22 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else if (body.action === 'start') {
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
+      const started = await getRoomSnapshot(normalizedCode, guest.id);
+      if (started.room.game_slug === DOWNSTAIRS_SLUG) {
+        const humans = started.members.filter((member) => !member.is_cpu);
+        if (humans.length !== 1) throw new ApiError('Solo LAD rooms are the only downstairs start supported in this release.', 400);
+        const initial = createSoloStartState(guest.id);
+        const { error: startEventError } = await admin.rpc('append_game_event', {
+          p_room_id: started.room.id,
+          p_guest_id: guest.id,
+          p_expected_version: started.room.version,
+          p_state: initial,
+          p_status: 'playing',
+          p_event_type: 'start',
+          p_payload: { kids: 1 },
+        });
+        if (startEventError) throw startEventError;
+      }
       logRoomLifecycle('start', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
     } else if (body.action === 'leave') {
       const { error } = await admin.rpc('leave_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });

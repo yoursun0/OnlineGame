@@ -29,6 +29,27 @@ export function roomHeadline(input: {
   gameSlug?: string;
 }) {
   const zh = input.language === 'zh-Hant';
+  if (input.gameSlug === 'downstairs') {
+    const state = input.state as { phase?: string; result?: { reason?: string }; checkpoint?: { well?: { kids?: Array<{ alive?: boolean; life?: number }> } } };
+    if (input.status === 'playing') {
+      const kid = state.checkpoint?.well?.kids?.[0];
+      if (kid && kid.alive === false) return zh ? '井已結束' : 'Well finished';
+      const life = kid?.life;
+      if (typeof life === 'number') {
+        return zh ? `Solo 井進行中 · 生命 ${Math.ceil(life)}` : `Solo well · life ${Math.ceil(life)}`;
+      }
+      return zh ? 'Solo 井進行中' : 'Solo well in play';
+    }
+    if (input.status === 'finished') {
+      const reason = state.result?.reason;
+      if (reason === 'quit') return zh ? '遊戲結束 — 已退出' : 'Game complete — quit';
+      if (reason === 'fall') return zh ? '遊戲結束 — 跌出井外' : 'Game complete — fell out';
+      if (reason === 'hp') return zh ? '遊戲結束 — 生命歸零' : 'Game complete — out of life';
+      return zh ? '遊戲結束' : 'Game complete';
+    }
+    return zh ? '等待開井' : 'Waiting to start the well';
+  }
+
   if (input.gameSlug === 'connect-four') {
     const state = input.state as ConnectFourState;
     if (input.status === 'playing') {

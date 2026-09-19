@@ -52,3 +52,22 @@ test('a Connect Four win names the winning guest and color', () => {
   expect(roomHeadline({ status: 'finished', state, members, language: 'en', gameSlug: 'connect-four' })).toBe('Game complete — Red · aa wins');
   expect(roomHeadline({ status: 'finished', state, members, language: 'zh-Hant', gameSlug: 'connect-four' })).toBe('遊戲結束 — 紅 · aa 獲勝');
 });
+
+test('a downstairs Solo well uses well headlines instead of turn marks', () => {
+  const playing = {
+    kind: 'well' as const,
+    phase: 'playing' as const,
+    checkpoint: {
+      kind: 'checkpoint' as const,
+      seq: 1,
+      well: {
+        clock: 2,
+        kids: [{ guestId: 'host', x: 40, y: 80, life: 9.2, alive: true }],
+        stairs: [{ id: 1, x: 18, y: 168, w: 108, kind: 'normal' }],
+      },
+    },
+  };
+  expect(roomHeadline({ status: 'playing', state: playing, members, language: 'en', gameSlug: 'downstairs' })).toBe('Solo well · life 10');
+  expect(roomHeadline({ status: 'finished', state: { ...playing, phase: 'finished', result: { reason: 'hp' } }, members, language: 'en', gameSlug: 'downstairs' })).toBe('Game complete — out of life');
+  expect(roomHeadline({ status: 'finished', state: { ...playing, phase: 'finished', result: { reason: 'fall' } }, members, language: 'zh-Hant', gameSlug: 'downstairs' })).toBe('遊戲結束 — 跌出井外');
+});
