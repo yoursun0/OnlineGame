@@ -53,3 +53,17 @@ test('a finished Shared well names the winner', () => {
     gameSlug: 'downstairs',
   })).toBe('Game complete — Host wins');
 });
+
+test('a downstairs waiting room with three humans still names Shared', () => {
+  expect(roomHeadline({
+    status: 'open',
+    state: { kind: 'well', phase: 'lobby', checkpoint: null },
+    members: [
+      { seat: 0, display_name: 'Host', guest_id: 'host' },
+      { seat: 1, display_name: 'G2', guest_id: 'g2' },
+      { seat: 2, display_name: 'G3', guest_id: 'g3' },
+    ],
+    language: 'en',
+    gameSlug: 'downstairs',
+  })).toBe('Waiting room — Shared well when ready');
+});

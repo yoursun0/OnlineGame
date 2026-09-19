@@ -59,7 +59,7 @@ export function RoomClient({ code }: { code: string }) {
     waitingBoth: isDownstairs ? 'Waiting for players' : 'Waiting for both players', replay: 'Replay', reportRoom: 'Report room', cpu: 'CPU',
     reportReason: 'Optional reason', reported: 'Reported', report: 'Report',
     help: isDownstairs
-      ? 'Solo alone, or invite one friend for a Shared well. Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish.'
+      ? 'Solo alone, or invite up to three friends for a Shared well (max 4). Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish. Joins after start are rejected.'
       : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
@@ -70,7 +70,7 @@ export function RoomClient({ code }: { code: string }) {
     waitingBoth: isDownstairs ? '等待玩家' : '等待兩位玩家準備', replay: '重玩一次', reportRoom: '舉報房間', cpu: '電腦',
     reportReason: '可選填原因', reported: '已舉報', report: '舉報',
     help: isDownstairs
-      ? '可單人即開 Solo 井，或邀請一位朋友開 Shared 共用井。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。'
+      ? '可單人即開 Solo 井，或邀請最多三位朋友開 Shared 共用井（最多 4 人）。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。開局後無法再加入。'
       : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 

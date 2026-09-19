@@ -79,8 +79,8 @@ export async function POST(request: NextRequest, { params }: Params) {
         const humans = started.members
           .filter((member) => !member.is_cpu)
           .sort((a, b) => a.seat - b.seat);
-        if (humans.length !== 1 && humans.length !== 2) {
-          throw new ApiError('This release supports Solo (1) or Shared (2) kids in a LAD well.', 400);
+        if (humans.length < 1 || humans.length > 4) {
+          throw new ApiError('A LAD well supports Solo (1) or Shared (2–4) kids.', 400);
         }
         const guestIds = [
           guest.id,
