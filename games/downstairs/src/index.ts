@@ -8,6 +8,7 @@ export {
   playingState,
 } from './state';
 export type {
+  DownstairsResult,
   DownstairsRoomPhase,
   DownstairsRoomState,
   RestorableKid,
@@ -25,7 +26,10 @@ export {
   STAGE_H,
   STAGE_W,
   STEP,
+  WELL_BROADCAST_HZ,
   WELL_CHECKPOINT_INTERVAL_MS,
+  WELL_OWN_PREDICT_SLACK_PX,
+  WELL_PRESENCE_GRACE_MS,
   isFloorKind,
   isVersus,
   playModeForCount,
@@ -44,16 +48,53 @@ export type {
 export { Engine } from './engine';
 export type { EngineConfig, Floor, Actor, TrapFlags } from './engine';
 export { renderWell } from './render';
+export {
+  WELL_BROADCAST_INTENT,
+  WELL_BROADCAST_SNAPSHOT,
+  WELL_TOPIC_PREFIX,
+  applyHostSnapshot,
+  applyOwnPrediction,
+  clampKidX,
+  createWellIntent,
+  createWellSnapshot,
+  isWellIntent,
+  isWellSnapshot,
+  kidsMissingFromOccupants,
+  latestPendingDirection,
+  pendingIntents,
+  predictOwnKidX,
+  wellTopic,
+  winnerGuestIdFromEngine,
+} from './net';
 
 import { Engine } from './engine';
+import { playModeForCount } from './constants';
 import { checkpointFromWell, playingState, type DownstairsRoomState } from './state';
+
+const DEFAULT_TRAPS = { conveyor: true, spring: true, fragile: true } as const;
 
 /** Build the first playing room state for a Solo well (host kid only). */
 export function createSoloStartState(hostGuestId: string): DownstairsRoomState {
+  return createStartState([hostGuestId]);
+}
+
+/** Build the first playing room state for a Shared well (2–4 kids). */
+export function createSharedStartState(guestIds: string[]): DownstairsRoomState {
+  if (guestIds.length < 2 || guestIds.length > 4) {
+    throw new Error('A Shared well needs 2–4 guest ids.');
+  }
+  return createStartState(guestIds);
+}
+
+/** Solo (1) or Shared (2–4) start Checkpoint from the host-first occupant list. */
+export function createStartState(guestIds: string[]): DownstairsRoomState {
+  if (guestIds.length < 1 || guestIds.length > 4) {
+    throw new Error('A downstairs well needs 1–4 guest ids.');
+  }
   const engine = new Engine();
   engine.start(
-    { mode: 'solo', difficulty: 'normal', traps: { conveyor: true, spring: true, fragile: true } },
-    [hostGuestId],
+    { mode: playModeForCount(guestIds.length), difficulty: 'normal', traps: { ...DEFAULT_TRAPS } },
+    guestIds,
   );
   return playingState(checkpointFromWell(0, engine.toRestorableWell()));
 }

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectFour } from '@playroom/connect-four';
-import { createSoloStartState, DOWNSTAIRS_SLUG } from '@playroom/downstairs';
+import { createSharedStartState, createSoloStartState, DOWNSTAIRS_SLUG } from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
@@ -76,9 +76,19 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       const started = await getRoomSnapshot(normalizedCode, guest.id);
       if (started.room.game_slug === DOWNSTAIRS_SLUG) {
-        const humans = started.members.filter((member) => !member.is_cpu);
-        if (humans.length !== 1) throw new ApiError('Solo LAD rooms are the only downstairs start supported in this release.', 400);
-        const initial = createSoloStartState(guest.id);
+        const humans = started.members
+          .filter((member) => !member.is_cpu)
+          .sort((a, b) => a.seat - b.seat);
+        if (humans.length !== 1 && humans.length !== 2) {
+          throw new ApiError('This release supports Solo (1) or Shared (2) kids in a LAD well.', 400);
+        }
+        const guestIds = [
+          guest.id,
+          ...humans.filter((member) => member.guest_id !== guest.id).map((member) => member.guest_id as string),
+        ];
+        const initial = humans.length === 1
+          ? createSoloStartState(guest.id)
+          : createSharedStartState(guestIds);
         const { error: startEventError } = await admin.rpc('append_game_event', {
           p_room_id: started.room.id,
           p_guest_id: guest.id,
@@ -86,7 +96,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           p_state: initial,
           p_status: 'playing',
           p_event_type: 'start',
-          p_payload: { kids: 1 },
+          p_payload: { kids: guestIds.length },
         });
         if (startEventError) throw startEventError;
       }

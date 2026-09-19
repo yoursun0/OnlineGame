@@ -27,6 +27,15 @@ export const MAX_FRAME_DT = 0.1;
 /** Sparse host → server Checkpoint interval. Not per-frame. */
 export const WELL_CHECKPOINT_INTERVAL_MS = 5000;
 
+/** Live Intent / Snapshot rate on Broadcast. Not a Postgres write. */
+export const WELL_BROADCAST_HZ = 12;
+
+/** Keep predicted own-kid X if it is this close to the host Snapshot. */
+export const WELL_OWN_PREDICT_SLACK_PX = 24;
+
+/** Wait this long after a seen non-host drops Presence before they leave the well. */
+export const WELL_PRESENCE_GRACE_MS = 2500;
+
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type FloorKind = 'normal' | 'spike' | 'convL' | 'convR' | 'spring' | 'fragile';
 export type PlayMode = 'solo' | 'vs2' | 'vs3' | 'vs4';

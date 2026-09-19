@@ -47,6 +47,8 @@ const errorTranslations: Record<string, string> = {
   'Checkpoint shape is invalid.': 'Checkpoint 格式無效。',
   'This room is not a downstairs well.': '這個房間不是落樓梯井。',
   'Solo LAD rooms are the only downstairs start supported in this release.': '此版本只支援單人 LAD 開局。',
+  'This release supports Solo (1) or Shared (2) kids in a LAD well.': '此版本的 LAD 井只支援 Solo（1 人）或 Shared（2 人）。',
+  'winnerGuestId must be a guest id string or null.': 'winnerGuestId 必須是訪客 id 或 null。',
   'Could not save well Checkpoint.': '未能保存井況 Checkpoint。',
   'Could not quit well.': '未能退出井況。',
   'All players must be ready before starting.': '所有玩家都要準備好才能開始。',
