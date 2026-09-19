@@ -20,8 +20,10 @@ import {
   createWellSnapshot,
   isWellIntent,
   isWellSnapshot,
+  guestWellRefreshOutcome,
   kidsMissingFromOccupants,
   renderWell,
+  shouldPersistHostLeftOnUnload,
   wellTopic,
   winnerGuestIdFromEngine,
   type DownstairsRoomState,
@@ -35,6 +37,7 @@ type Props = {
   roomVersion: number;
   roomId: string;
   guestId: string;
+  hostGuestId: string;
   token: string;
   code: string;
   isHost: boolean;
@@ -53,6 +56,7 @@ export function DownstairsWell({
   roomVersion,
   roomId,
   guestId,
+  hostGuestId,
   token,
   code,
   isHost,
@@ -69,11 +73,22 @@ export function DownstairsWell({
   const ackRef = useRef(0);
   const finishedRef = useRef(roomState.phase === 'finished');
   const shared = (roomState.checkpoint?.well.kids.length ?? 1) > 1;
+  const refreshOutcome = guestWellRefreshOutcome(roomState.phase, roomState.checkpoint);
   const [life, setLife] = useState(12);
   const [depth, setDepth] = useState(0);
   const [over, setOver] = useState(roomState.phase === 'finished');
+  const [out, setOut] = useState(refreshOutcome === 'out');
 
   useEffect(() => { versionRef.current = roomVersion; }, [roomVersion]);
+
+  useEffect(() => {
+    const outcome = guestWellRefreshOutcome(roomState.phase, roomState.checkpoint);
+    setOut(outcome === 'out');
+    if (outcome === 'finished') {
+      finishedRef.current = true;
+      setOver(true);
+    }
+  }, [roomState.phase, roomState.checkpoint]);
 
   useEffect(() => {
     if (!roomState.checkpoint) return;
@@ -98,6 +113,48 @@ export function DownstairsWell({
       if (ctx) renderWell(ctx, engine, performance.now() / 1000);
     }
   }, [roomState.checkpoint, roomState.phase, guestId]);
+
+  // Shared host navigate-away / tab close: persist host_left so guests do not freeze.
+  // Solo host refresh must NOT finish here (#10 recovery).
+  useEffect(() => {
+    if (!shouldPersistHostLeftOnUnload({
+      isHost,
+      shared,
+      phase: roomState.phase,
+      alreadyFinished: finishedRef.current || roomState.phase === 'finished',
+    })) return;
+
+    function persistHostLeftKeepalive() {
+      if (finishedRef.current) return;
+      const engine = engineRef.current;
+      const checkpoint = engine
+        ? checkpointFromWell(seqRef.current + 1, engine.toRestorableWell())
+        : roomState.checkpoint;
+      if (!checkpoint) return;
+      finishedRef.current = true;
+      const body = JSON.stringify({
+        action: 'finish',
+        checkpoint,
+        reason: 'host_left',
+        winnerGuestId: null,
+        expectedVersion: versionRef.current,
+      });
+      try {
+        void fetch(`/api/rooms/${code}/well`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body,
+          keepalive: true,
+        });
+      } catch {
+        // Best-effort on unload.
+      }
+    }
+
+    const onPageHide = () => persistHostLeftKeepalive();
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [isHost, shared, roomState.phase, roomState.checkpoint, code, token]);
 
   // Host Solo or Shared simulator + sparse Postgres Checkpoints.
   useEffect(() => {
@@ -296,6 +353,36 @@ export function DownstairsWell({
       channel = supabase.channel(wellTopic(roomId), {
         config: { presence: { key: guestId } },
       });
+      let hostMissingSince: number | null = null;
+      let declaringHostLeft = false;
+
+      async function declareHostLeft() {
+        if (declaringHostLeft || finishedRef.current || !alive) return;
+        declaringHostLeft = true;
+        finishedRef.current = true;
+        setOver(true);
+        try {
+          const response = await fetch(`/api/rooms/${code}/well`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              action: 'finish',
+              reason: 'host_left',
+              winnerGuestId: null,
+              expectedVersion: versionRef.current,
+            }),
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? 'Could not end well after host left.');
+          versionRef.current = payload.room.version;
+          onPersisted(payload);
+        } catch (error) {
+          onError(error instanceof Error ? error.message : 'Could not end well after host left.');
+          declaringHostLeft = false;
+          finishedRef.current = false;
+        }
+      }
+
       channel.on('broadcast', { event: WELL_BROADCAST_SNAPSHOT }, ({ payload }) => {
         if (!isWellSnapshot(payload)) return;
         const engine = engineRef.current;
@@ -308,6 +395,25 @@ export function DownstairsWell({
         if (engine.over) {
           finishedRef.current = true;
           setOver(true);
+        }
+      });
+      channel.on('presence', { event: 'sync' }, () => {
+        if (!channel || finishedRef.current) return;
+        const state = channel.presenceState() as Record<string, Array<{ guestId?: string }>>;
+        const occupants = Object.values(state).flatMap((entries) =>
+          entries.map((entry) => entry.guestId).filter((id): id is string => typeof id === 'string' && id.length > 0),
+        );
+        const now = performance.now();
+        if (occupants.includes(hostGuestId)) {
+          hostMissingSince = null;
+          return;
+        }
+        if (hostMissingSince === null) {
+          hostMissingSince = now;
+          return;
+        }
+        if (now - hostMissingSince >= WELL_PRESENCE_GRACE_MS) {
+          void declareHostLeft();
         }
       });
       void channel.subscribe(async (status) => {
@@ -357,7 +463,7 @@ export function DownstairsWell({
         if (client) void client.removeChannel(channel);
       }
     };
-  }, [isHost, shared, roomState.phase, Boolean(roomState.checkpoint), roomId, guestId]);
+  }, [isHost, shared, roomState.phase, Boolean(roomState.checkpoint), roomId, guestId, hostGuestId, code, token, onPersisted, onError]);
 
   // Solo non-host: still render Checkpoint-only view (no controls).
   useEffect(() => {
@@ -418,17 +524,30 @@ export function DownstairsWell({
   const zh = language === 'zh-Hant';
   const reason = roomState.result?.reason;
   const winnerId = roomState.result?.winnerGuestId;
-  const resultLabel = reason === 'quit'
-    ? (zh ? '已退出' : 'Quit')
-    : winnerId
-      ? (zh ? '勝出' : 'Winner')
-      : reason === 'fall'
-        ? (zh ? '跌出井外' : 'Fell out')
-        : reason === 'hp'
-          ? (zh ? '生命歸零' : 'Out of life')
-          : (zh ? '井已結束' : 'Well finished');
+  const resultLabel = reason === 'host_left'
+    ? (zh ? '房主已離開' : 'Host left')
+    : reason === 'quit'
+      ? (zh ? '已退出' : 'Quit')
+      : winnerId
+        ? (zh ? '勝出' : 'Winner')
+        : reason === 'fall'
+          ? (zh ? '跌出井外' : 'Fell out')
+          : reason === 'hp'
+            ? (zh ? '生命歸零' : 'Out of life')
+            : (zh ? '井已結束' : 'Well finished');
 
-  const showControls = !over && (isHost || shared);
+  const showControls = !over && !out && (isHost || shared);
+
+  if (out) {
+    return (
+      <div className="well-play">
+        <div className="well-hud">
+          <span className="well-over">{zh ? '你已出局（沒有 Checkpoint 可恢復）' : 'You are out (no Checkpoint to restore)'}</span>
+        </div>
+        <p className="room-help">{zh ? '重新整理時若伺服器沒有 Checkpoint，非房主會出局。' : 'On refresh, a non-host is out when the server has no Checkpoint.'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="well-play">

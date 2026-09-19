@@ -161,6 +161,7 @@ export function RoomClient({ code }: { code: string }) {
           roomVersion={snapshot.room.version}
           roomId={snapshot.room.id}
           guestId={guestId}
+          hostGuestId={snapshot.room.host_guest_id}
           token={token}
           code={code}
           isHost={snapshot.room.host_guest_id === guestId}

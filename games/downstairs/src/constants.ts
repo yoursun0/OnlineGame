@@ -39,7 +39,7 @@ export const WELL_PRESENCE_GRACE_MS = 2500;
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type FloorKind = 'normal' | 'spike' | 'convL' | 'convR' | 'spring' | 'fragile';
 export type PlayMode = 'solo' | 'vs2' | 'vs3' | 'vs4';
-export type WellFinishReason = 'hp' | 'fall' | 'quit';
+export type WellFinishReason = 'hp' | 'fall' | 'quit' | 'host_left';
 export type PlayerId = 0 | 1 | 2 | 3;
 
 export const FLOOR_KINDS: readonly FloorKind[] = ['normal', 'spike', 'convL', 'convR', 'spring', 'fragile'];

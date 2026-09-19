@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { connectFour } from '@playroom/connect-four';
-import { createSharedStartState, createSoloStartState, DOWNSTAIRS_SLUG } from '@playroom/downstairs';
+import {
+  createSharedStartState,
+  createSoloStartState,
+  DOWNSTAIRS_SLUG,
+  finishedState,
+  isDownstairsRoomState,
+} from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
@@ -102,6 +108,32 @@ export async function POST(request: NextRequest, { params }: Params) {
       }
       logRoomLifecycle('start', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
     } else if (body.action === 'leave') {
+      // Host leave mid-fall ends the well for remaining guests (v1: no host handoff).
+      try {
+        const current = await getRoomSnapshot(normalizedCode, guest.id);
+        if (
+          current.room.game_slug === DOWNSTAIRS_SLUG
+          && current.room.status === 'playing'
+          && current.room.host_guest_id === guest.id
+          && isDownstairsRoomState(current.room.state)
+          && current.room.state.checkpoint
+        ) {
+          const nextState = finishedState(current.room.state.checkpoint, 'host_left', null);
+          const { error: finishError } = await admin.rpc('append_game_event', {
+            p_room_id: current.room.id,
+            p_guest_id: guest.id,
+            p_expected_version: current.room.version,
+            p_state: nextState,
+            p_status: 'finished',
+            p_event_type: 'finish',
+            p_payload: { seq: current.room.state.checkpoint.seq, reason: 'host_left', winnerGuestId: null },
+          });
+          if (finishError) throw finishError;
+          logRoomLifecycle('finish', { roomCode: normalizedCode, guestId: guest.id, version: current.room.version + 1, status: 'finished' });
+        }
+      } catch {
+        // Best-effort: leave still proceeds if finish raced or room already ended.
+      }
       const { error } = await admin.rpc('leave_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       logRoomLifecycle('leave', { roomCode: normalizedCode, guestId: guest.id });
