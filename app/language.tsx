@@ -40,6 +40,8 @@ const errorTranslations: Record<string, string> = {
   'It is not this player’s turn.': '還未輪到這位玩家。',
   'Replay is only available after the game ends.': '遊戲結束後才能重玩。',
   'Both players must still be in the room to replay.': '兩位玩家都還在房間裡才能重玩。',
+  'Players must still be in the room to replay.': '玩家都還在房間裡才能重玩。',
+  'The host must still be in the room to replay.': '房主還在房間裡才能重玩。',
   'A replay needs a fresh game state.': '重玩需要新的棋局狀態。',
   'Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.': '請輸入類似 TIK-7Q4、CON-K8P 或 LAD-ZHW 的房號。',
   '小朋友落樓梯 is realtime only.': '小朋友落樓梯只支援即時模式。',

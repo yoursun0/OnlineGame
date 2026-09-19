@@ -17,6 +17,7 @@ This is the source of truth for PLAYROOM 小朋友落樓梯 (Downstairs). v1 is 
 - A non-host who refreshes resumes from the last Checkpoint if one exists; otherwise they are out. Finished wells still show the result after refresh. A Solo host refresh restores the Checkpoint or the finished result (does not write `host_left`).
 - v1 trusts the host simulator for positions and deaths. The server checks membership, payload size, and Checkpoint shape.
 - Clients must not use WebRTC or the turn-based move endpoint for this game.
+- A rematch in the same room (Replay / 重玩一次) keeps the same room code, seats, and host. Any remaining member may request it after `status = finished`, matching Connect Four: the server writes a fresh Solo or Shared start Checkpoint (no prior Game Over `result`) and sets `status` back to `playing`. Occupancy may be 1–4; the host must still be present. Leave still exits the room; Replay does not.
 
 ## Open decisions
 

@@ -13,6 +13,10 @@ Current order:
 7. `20260912000100_room_replay.sql` — same-room rematch RPC after a finished game.
 8. `20260912000200_tic_tac_toe_cpu_and_random_seats.sql` — solo start versus CPU and random X/O seats.
 9. `20260912000300_connect_four_rooms.sql` — allow Connect Four rooms with `CON-` codes and a 6×7 initial board.
+10. `20260919000100_downstairs_solo_rooms.sql` — LAD Solo/Shared create + start (max 4, no CPU).
+11. `20260919000200_downstairs_shared_3_4_kids.sql` — Shared join/start for 3–4 kids.
+12. `20260919000300_host_leave_keeps_finished.sql` — finished rooms keep status when host leaves.
+13. `20260920000100_downstairs_room_replay.sql` — LAD same-room rematch without requiring a full room.
 
 Apply and verify against an explicit target:
 
