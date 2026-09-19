@@ -42,6 +42,9 @@ type Props = {
   code: string;
   isHost: boolean;
   language: 'en' | 'zh-Hant';
+  canReplay?: boolean;
+  replayBusy?: boolean;
+  onReplay?: () => void;
   onPersisted: (snapshot: unknown) => void;
   onError: (message: string) => void;
 };
@@ -61,6 +64,9 @@ export function DownstairsWell({
   code,
   isHost,
   language,
+  canReplay = false,
+  replayBusy = false,
+  onReplay,
   onPersisted,
   onError,
 }: Props) {
@@ -557,6 +563,18 @@ export function DownstairsWell({
         {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
         {over && <span className="well-over">{resultLabel}</span>}
       </div>
+      {over && canReplay && onReplay && (
+        <div className="well-controls">
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={replayBusy}
+            onClick={() => onReplay()}
+          >
+            {zh ? '重玩一次' : 'Replay'} <span>→</span>
+          </button>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         className="well-canvas"

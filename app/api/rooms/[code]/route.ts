@@ -12,6 +12,7 @@ import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthentic
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
 import { isPlayroomRoomCode } from '../../../room-code';
+import { downstairsReplayGuestIds } from '../../../room-replay';
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -148,7 +149,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else if (body.action === 'replay') {
       await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
       const current = await getRoomSnapshot(normalizedCode, guest.id);
-      const initialState = current.room.game_slug === 'connect-four' ? connectFour.createInitialState() : ticTacToe.createInitialState();
+      let initialState;
+      if (current.room.game_slug === 'connect-four') {
+        initialState = connectFour.createInitialState();
+      } else if (current.room.game_slug === DOWNSTAIRS_SLUG) {
+        const guestIds = downstairsReplayGuestIds(
+          current.room.host_guest_id as string,
+          current.members as Array<{ guest_id: string; seat: number; is_cpu?: boolean }>,
+        );
+        initialState = guestIds.length === 1
+          ? createSoloStartState(guestIds[0]!)
+          : createSharedStartState(guestIds);
+      } else {
+        initialState = ticTacToe.createInitialState();
+      }
       const { error } = await admin.rpc('replay_room_for_guest', {
         p_code: normalizedCode,
         p_guest_id: guest.id,
