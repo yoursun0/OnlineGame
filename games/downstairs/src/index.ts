@@ -24,6 +24,7 @@ export {
   PLAYER_COLOR,
   SPIKE_DMG,
   STAGE_H,
+  SPRITE_SIZE,
   STAGE_W,
   STEP,
   WELL_BROADCAST_HZ,
@@ -56,6 +57,9 @@ export type { GuestWellRefreshOutcome } from './leave';
 export { Engine } from './engine';
 export type { EngineConfig, Floor, Actor, TrapFlags } from './engine';
 export { renderWell } from './render';
+export type { WellRenderAssets } from './render';
+export { loadWellAssets, spriteFor } from './assets';
+export type { GameAssets, SpriteSet, WellTextures } from './assets';
 export {
   WELL_BROADCAST_INTENT,
   WELL_BROADCAST_SNAPSHOT,

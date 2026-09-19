@@ -5,6 +5,7 @@ export const WALL_W = 18;
 
 export const HERO_W = 22;
 export const HERO_H = 34;
+export const SPRITE_SIZE = 54;
 
 export const FLOOR_H = 14;
 export const FLOOR_W = 108;

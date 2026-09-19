@@ -22,12 +22,14 @@ import {
   isWellSnapshot,
   guestWellRefreshOutcome,
   kidsMissingFromOccupants,
+  loadWellAssets,
   renderWell,
   shouldPersistHostLeftOnUnload,
   wellTopic,
   winnerGuestIdFromEngine,
   type DownstairsRoomState,
   type WellFinishReason,
+  type WellRenderAssets,
 } from '@playroom/downstairs';
 import type { WellIntentDirection } from '@playroom/game-core';
 import { getBrowserSupabase } from './lib/supabase-browser';
@@ -72,6 +74,7 @@ export function DownstairsWell({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<Engine | null>(null);
+  const artRef = useRef<WellRenderAssets | null>(null);
   const versionRef = useRef(roomVersion);
   const seqRef = useRef(roomState.checkpoint?.seq ?? 0);
   const intentRef = useRef<WellIntentDirection>('none');
@@ -86,6 +89,24 @@ export function DownstairsWell({
   const [out, setOut] = useState(refreshOutcome === 'out');
 
   useEffect(() => { versionRef.current = roomVersion; }, [roomVersion]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadWellAssets().then((loaded) => {
+      if (cancelled) return;
+      artRef.current = { kids: loaded.kids, textures: loaded.textures };
+      const engine = engineRef.current;
+      const canvas = canvasRef.current;
+      if (engine && canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) renderWell(ctx, engine, performance.now() / 1000, artRef.current);
+      }
+    }).catch(() => {
+      // Fallback kid drawing still works without sheets.
+    });
+    return () => { cancelled = true; };
+  }, []);
+
 
   useEffect(() => {
     const outcome = guestWellRefreshOutcome(roomState.phase, roomState.checkpoint);
@@ -116,7 +137,7 @@ export function DownstairsWell({
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      if (ctx) renderWell(ctx, engine, performance.now() / 1000);
+      if (ctx) renderWell(ctx, engine, performance.now() / 1000, artRef.current);
     }
   }, [roomState.checkpoint, roomState.phase, guestId]);
 
@@ -316,7 +337,7 @@ export function DownstairsWell({
         }
       }
       const ctx = canvas.getContext('2d');
-      if (ctx) renderWell(ctx, engine, now / 1000);
+      if (ctx) renderWell(ctx, engine, now / 1000, artRef.current);
       requestAnimationFrame(frame);
     }
     const raf = requestAnimationFrame(frame);
@@ -455,7 +476,7 @@ export function DownstairsWell({
         setDepth(engine.depth);
       }
       const ctx = canvas.getContext('2d');
-      if (ctx) renderWell(ctx, engine, now / 1000);
+      if (ctx) renderWell(ctx, engine, now / 1000, artRef.current);
       requestAnimationFrame(frame);
     }
     const raf = requestAnimationFrame(frame);
@@ -481,7 +502,7 @@ export function DownstairsWell({
       const canvas = canvasRef.current;
       if (engine && canvas) {
         const ctx = canvas.getContext('2d');
-        if (ctx) renderWell(ctx, engine, now / 1000);
+        if (ctx) renderWell(ctx, engine, now / 1000, artRef.current);
       }
       requestAnimationFrame(frame);
     }
