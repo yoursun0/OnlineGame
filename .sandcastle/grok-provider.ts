@@ -2,7 +2,7 @@
  * Custom Sandcastle AgentProvider for the Grok CLI (`grok`).
  *
  * Headless AFK:
- *   grok --prompt-file /dev/stdin \
+ *   (stdin → temp file) grok --prompt-file $TMP \
  *     --output-format streaming-messages-json \
  *     --always-approve \
  *     [-m MODEL] [--resume SESSION] [--fork-session]
@@ -216,10 +216,14 @@ export const grok = (options?: GrokProviderOptions): AgentProvider => {
       const forkFlag =
         resumeSession && forkSession ? " --fork-session" : "";
 
-      // Grok does not treat piped stdin as the prompt; --prompt-file is the
-      // supported large-prompt path. /dev/stdin receives Sandcastle's stdin pipe.
+      // noSandbox + non-TTY: grok --prompt-file /dev/stdin fails with
+      // "No such device or address". Pipe Sandcastle stdin into a temp file
+      // first, then point --prompt-file at that path.
       return {
-        command: `${shellEscape(binary)} --prompt-file /dev/stdin --output-format streaming-messages-json --always-approve${modelFlag}${resumeFlag}${forkFlag}`,
+        command:
+          `PROMPT_FILE=$(mktemp) && cat > "$PROMPT_FILE" && ` +
+          `${shellEscape(binary)} --prompt-file "$PROMPT_FILE" --output-format streaming-messages-json --always-approve${modelFlag}${resumeFlag}${forkFlag}; ` +
+          `EC=$?; rm -f "$PROMPT_FILE"; exit $EC`,
         stdin: prompt,
       };
     },
