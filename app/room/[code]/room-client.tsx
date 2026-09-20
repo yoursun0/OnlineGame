@@ -186,6 +186,7 @@ export function RoomClient({ code }: { code: string }) {
         onMove={(move) => void playMove(move)}
         disabled={busy || !ownTurn}
         language={language}
+        isHost={snapshot.room.host_guest_id === guestId}
       />
     : (snapshot.room.status === 'playing' || snapshot.room.status === 'finished') && !isTienGow
     ? isDownstairs && downstairsState

@@ -258,6 +258,29 @@ h1, h2, h3, p { margin-top: 0; }
   margin-top: 10px;
   overflow-x: auto;
 }
+.tgw-play .tgw-seat.to-act.clock-warn .tgw-seat-meta,
+.tgw-play .tgw-status.clock-warn {
+  color: var(--cinnabar);
+  animation: tgw-clock-pulse 1s ease-in-out infinite;
+}
+.tgw-clock-toast {
+  margin: 0 0 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--cinnabar);
+  color: var(--ivory);
+  font-size: 14px;
+  font-weight: 700;
+}
+.tgw-clock-nudge {
+  margin: 0 0 10px;
+  color: var(--brass);
+  font-size: 13px;
+}
+@keyframes tgw-clock-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
 @keyframes connect-token-drop { 0% { transform: translateY(-160%); } 55% { transform: translateY(10%); } 76% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
 @keyframes connect-winner-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 @keyframes connect-sheen { 0%, 72%, 100% { transform: translateX(-120%); } 84% { transform: translateX(120%); } }
