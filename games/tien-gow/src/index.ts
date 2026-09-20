@@ -1,7 +1,7 @@
 export { tienGow } from './adapter';
 export { comboBeats, enumerateCombos, identifyCombo, isGaojiaoPair, CLASS_LABEL, type Combo, type ComboClass, type Family } from './combinations';
 export { dumpFollowMove, nextCpuMove, nextLabCpuMove } from './cpu';
-export { dealHands, hashSeed, nextHandSeed, randomBankerSeat } from './deal';
+export { dealHands, hashSeed, nextHandSeed, randomBankerSeat, shuffle } from './deal';
 export {
   dealLabHand,
   initialLabSeed,

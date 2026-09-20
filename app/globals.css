@@ -165,6 +165,11 @@ h1, h2, h3, p { margin-top: 0; }
 .player-row { display: grid; grid-template-columns: 31px 1fr auto; align-items: center; gap: 9px; padding: 12px 13px; border-top: 1px solid var(--line); font-size: 13px; }
 .player-mark { width: 28px; height: 28px; display: grid; place-items: center; color: var(--ink); background: var(--coral); border-radius: 9px; font-family: var(--display); }
 .player-mark-1 { background: var(--sky); }
+.player-mark-2 { background: var(--saffron); }
+.player-mark-3 { background: var(--mint); }
+.player-mark-tiengow { font-size: 13px; letter-spacing: 0; }
+.player-row-empty { opacity: .58; }
+.cpu-badge { color: var(--lilac); font-size: 9px; font-weight: 900; text-transform: uppercase; }
 .player-mark-connect { border-radius: 50%; box-shadow: inset 1px 2px 2px rgba(255,255,255,.28), 0 2px 6px rgba(0,0,0,.28); }
 .player-mark-connect.player-mark-0 { background: radial-gradient(circle at 31% 27%, #ff9d84 0%, var(--coral) 42%, #cf3e4e 100%); }
 .player-mark-connect.player-mark-1 { background: radial-gradient(circle at 31% 27%, #fff0b5 0%, #ffd36b 42%, #e6a63a 100%); }
