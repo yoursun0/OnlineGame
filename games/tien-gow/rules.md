@@ -13,6 +13,8 @@ Source of truth for play. Scores in 棟, not money.
 
 Locked before the first hand. Unchanged for the room. CPU uses the same Table.
 
+Playroom `TGW` rooms use this same Table: the host sets the checkboxes in the pre-start lobby (defaults match this table), then they lock at start. Lab `/lab/tien-gow` may retune options between hands; Playroom does not. No lab `god` view in Playroom.
+
 Always on: 格食格, 墊牌 face down, 上家不打下家不墊, equal-rank 武子 cannot beat, 武尊 lead-only unbeatable, 准拆 (lead may play part of a larger set).
 
 | Option | Default | Effect if on |

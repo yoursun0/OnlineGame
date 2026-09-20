@@ -8,13 +8,13 @@ import {
   isDownstairsRoomState,
 } from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
-import { createHand } from '@playroom/tien-gow';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
-import { projectTienGowSnapshot } from '../../_lib/tien-gow-room';
+import { isTienGowState, projectTienGowSnapshot } from '../../_lib/tien-gow-room';
 import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from '../../../room-code';
 import { downstairsReplayGuestIds } from '../../../room-replay';
+import { dealPlayroomHand, lobbyStateWithTable, parsePlayroomTable, tableFromLobbyState } from '../../../tien-gow-table';
 
 type Params = { params: Promise<{ code: string }> };
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean };
+    const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean; table?: unknown };
     action = body.action ?? 'unknown';
     if (body.action === 'join') {
       const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
@@ -83,6 +83,18 @@ export async function POST(request: NextRequest, { params }: Params) {
       const { error } = await admin.rpc('set_room_ready_for_guest', { p_code: normalizedCode, p_guest_id: guest.id, p_ready: body.ready !== false });
       if (error) throw error;
       logRoomLifecycle('ready', { roomCode: normalizedCode, guestId: guest.id });
+    } else if (body.action === 'table') {
+      const current = await getRoomSnapshot(normalizedCode, guest.id);
+      if (current.room.game_slug !== 'tien-gow') throw new ApiError('Table options are only for 打天九.', 400);
+      if (current.room.status !== 'open') throw new ApiError('Table options can only be set before the first hand.', 400);
+      if (current.room.host_guest_id !== guest.id) throw new ApiError('Only the host can set Table options.', 403);
+      const table = parsePlayroomTable(body.table);
+      const { error } = await admin.from('rooms').update({
+        state: lobbyStateWithTable(table),
+        last_activity_at: new Date().toISOString(),
+      }).eq('id', current.room.id).eq('status', 'open');
+      if (error) throw error;
+      logRoomLifecycle('table', { roomCode: normalizedCode, guestId: guest.id, status: 'open' });
     } else if (body.action === 'start') {
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
@@ -92,7 +104,8 @@ export async function POST(request: NextRequest, { params }: Params) {
         if (humans.length < 1 || humans.length > 4 || started.members.length !== 4) {
           throw new ApiError('A 打天九 table needs 1–4 humans.', 400);
         }
-        const initial = createHand({ seed: `tgw:${normalizedCode}` });
+        const table = body.table !== undefined ? parsePlayroomTable(body.table) : tableFromLobbyState(started.room.state);
+        const initial = dealPlayroomHand({ kind: 'open', code: normalizedCode, table });
         const { error: startEventError } = await admin.rpc('append_game_event', {
           p_room_id: started.room.id,
           p_guest_id: guest.id,
@@ -100,7 +113,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           p_state: initial,
           p_status: 'playing',
           p_event_type: 'start',
-          p_payload: { seats: 4, humans: humans.length },
+          p_payload: { seats: 4, humans: humans.length, table },
         });
         if (startEventError) throw startEventError;
       } else if (started.room.game_slug === DOWNSTAIRS_SLUG) {
@@ -170,6 +183,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else if (body.action === 'replay') {
       await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
       const current = await getRoomSnapshot(normalizedCode, guest.id);
+      if (current.room.game_slug === 'tien-gow') {
+        throw new ApiError('Wait until 結 before dealing the next hand.', 400);
+      }
       let initialState;
       if (current.room.game_slug === 'connect-four') {
         initialState = connectFour.createInitialState();
@@ -191,6 +207,31 @@ export async function POST(request: NextRequest, { params }: Params) {
       });
       if (error) throw error;
       logRoomLifecycle('replay', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
+    } else if (body.action === 'rematch' || body.action === 'next') {
+      await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
+      const current = await getRoomSnapshot(normalizedCode, guest.id);
+      if (current.room.game_slug !== 'tien-gow') throw new ApiError('Wait until 結 before dealing the next hand.', 400);
+      if (current.room.status !== 'playing' || !isTienGowState(current.room.state) || current.room.state.phase !== 'recap') {
+        throw new ApiError('Wait until 結 before dealing the next hand.', 400);
+      }
+      const member = current.members.find((candidate) => candidate.guest_id === guest.id);
+      if (!member || member.is_cpu) throw new Error('You are not a member of this room.');
+      const nextState = dealPlayroomHand({
+        kind: body.action,
+        code: normalizedCode,
+        current: current.room.state,
+      });
+      const { error } = await admin.rpc('append_game_event', {
+        p_room_id: current.room.id,
+        p_guest_id: guest.id,
+        p_expected_version: current.room.version,
+        p_state: nextState,
+        p_status: 'playing',
+        p_event_type: 'start',
+        p_payload: { kind: body.action, seats: 4 },
+      });
+      if (error) throw error;
+      logRoomLifecycle('start', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
     } else {
       throw new Error('Unknown room action.');
     }

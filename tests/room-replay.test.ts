@@ -2,6 +2,27 @@ import { expect, test } from 'bun:test';
 import { createSharedStartState, createSoloStartState, finishedState } from '@playroom/downstairs';
 import { canShowRoomReplay, downstairsReplayGuestIds } from '../app/room-replay';
 
+test('TGW rematch is in-hand after 結, not finished-room Replay', () => {
+  expect(canShowRoomReplay({
+    status: 'finished',
+    gameSlug: 'tien-gow',
+    isMember: true,
+    memberCount: 4,
+    maxPlayers: 4,
+    humanCount: 1,
+    hostStillPresent: true,
+  })).toBe(false);
+  expect(canShowRoomReplay({
+    status: 'playing',
+    gameSlug: 'tien-gow',
+    isMember: true,
+    memberCount: 4,
+    maxPlayers: 4,
+    humanCount: 1,
+    hostStillPresent: true,
+  })).toBe(false);
+});
+
 test('Connect Four / Tic-tac-toe rematch shows only when every seat is filled', () => {
   expect(canShowRoomReplay({
     status: 'finished',

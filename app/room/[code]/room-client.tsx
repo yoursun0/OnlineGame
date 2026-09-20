@@ -15,8 +15,10 @@ import { roomHeadline } from '../../room-headline';
 import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
 import { tienGowLobbySlots, tienGowSeatMark, tienGowSeatWind } from '../../tien-gow-seats';
+import { canDealTienGowHand, tableFromLobbyState, type TienGowLobbyState } from '../../tien-gow-table';
+import { TienGowTableOptions } from '../../tien-gow-table-options';
 
-type GameState = TicTacToeState | ConnectFourState | DownstairsRoomState | TienGowView;
+type GameState = TicTacToeState | ConnectFourState | DownstairsRoomState | TienGowView | TienGowLobbyState;
 type Room = { id: string; code: string; game_slug: string; mode: 'realtime' | 'turn_based'; status: 'open' | 'playing' | 'finished' | 'expired'; host_guest_id: string; state: GameState; version: number; max_players: number };
 type Member = { guest_id: string; display_name: string; seat: number; is_ready: boolean; is_cpu?: boolean };
 type Snapshot = { room: Room; members: Member[]; events: Array<{ version: number; event_type: string }> };
@@ -71,7 +73,7 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? 'Solo alone, or invite up to three friends for a Shared well (max 4). Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish. Joins after start are rejected.'
       : isTienGow
-        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Each human only sees their own hand; CPU seats play immediately. Min 1 human; 2–4 humans must all be ready.'
+        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Host sets Table options in the lobby (lab defaults). Each human only sees their own hand; CPU seats play immediately. Min 1 human; 2–4 humans must all be ready.'
         : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
@@ -85,7 +87,7 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? '可單人即開 Solo 井，或邀請最多三位朋友開 Shared 共用井（最多 4 人）。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。開局後無法再加入。'
       : isTienGow
-        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。每位玩家只看見自己的手牌；電腦座位會立刻出牌。至少 1 人即可開；2–4 人時全員要準備。'
+        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。房主在大廳設定臺面規則（與 lab 預設相同）。每位玩家只看見自己的手牌；電腦座位會立刻出牌。至少 1 人即可開；2–4 人時全員要準備。'
         : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
@@ -179,6 +181,13 @@ export function RoomClient({ code }: { code: string }) {
 
   const downstairsState = isDownstairs && isDownstairsRoomState(snapshot.room.state) ? snapshot.room.state : null;
   const tienGowView = isTienGow && isTienGowView(snapshot.room.state) ? snapshot.room.state : null;
+  const tgwLobbyTable = isTienGow ? tableFromLobbyState(snapshot.room.state) : null;
+  const canDeal = Boolean(tienGowView && canDealTienGowHand({
+    status: snapshot.room.status,
+    phase: tienGowView.phase,
+    isMember: Boolean(ownMember),
+    isCpu: ownMember?.is_cpu,
+  }));
   const board = isTienGow && snapshot.room.status === 'playing' && tienGowView
     ? <TienGowBoard
         view={tienGowView}
@@ -187,6 +196,10 @@ export function RoomClient({ code }: { code: string }) {
         disabled={busy || !ownTurn}
         language={language}
         isHost={snapshot.room.host_guest_id === guestId}
+        onNext={() => void action('next')}
+        onRematch={() => void action('rematch')}
+        canDeal={canDeal}
+        dealBusy={busy}
       />
     : (snapshot.room.status === 'playing' || snapshot.room.status === 'finished') && !isTienGow
     ? isDownstairs && downstairsState
@@ -210,7 +223,17 @@ export function RoomClient({ code }: { code: string }) {
       : isConnect
         ? <ConnectFourBoard state={snapshot.room.state as ConnectFourState} onMove={(column) => void playMove({ column })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
         : <Board state={snapshot.room.state as TicTacToeState} onMove={(cell) => void playMove({ cell })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
-    : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}${isTienGow ? ' waiting-mark-tiengow' : ''}`}>{isDownstairs ? '⇧' : isTienGow ? '天九' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isTienGow ? (language === 'en' ? 'Tien Gow lobby' : '打天九大廳') : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
+    : isTienGow && tgwLobbyTable
+      ? <div className="tgw-play tgw-lobby-setup">
+          <div className="waiting-mark waiting-mark-tiengow">天九<br />{language === 'en' ? 'Tien Gow lobby' : '打天九大廳'}</div>
+          <TienGowTableOptions
+            table={tgwLobbyTable}
+            editable={snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId}
+            language={language}
+            onChange={(table) => void action('table', { table })}
+          />
+        </div>
+      : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
 
   const startLabel = !canStart
     ? text.waitingBoth
@@ -236,7 +259,7 @@ export function RoomClient({ code }: { code: string }) {
               <span className={isCpu ? 'cpu-badge' : member!.is_ready ? 'ready-label' : 'waiting-label'}>{isCpu ? text.cpu : member!.is_ready ? text.ready : text.waiting}</span>
             </div>;
           })
-        : snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}${isConnect ? ' player-mark-connect' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '' : member.seat === 0 ? 'X' : 'O'}</span><span>{member.is_cpu ? text.cpu : member.display_name}{!member.is_cpu && member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && humanCount > 1 && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !canStart} type="button" onClick={() => void action('start')}>{startLabel}</button>}{canReplay && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('replay')}>{text.replay} <span>→</span></button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
+        : snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}${isConnect ? ' player-mark-connect' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '' : member.seat === 0 ? 'X' : 'O'}</span><span>{member.is_cpu ? text.cpu : member.display_name}{!member.is_cpu && member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && humanCount > 1 && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !canStart} type="button" onClick={() => void action('start', isTienGow && tgwLobbyTable ? { table: tgwLobbyTable } : {})}>{startLabel}</button>}{canReplay && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('replay')}>{text.replay} <span>→</span></button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
     </section>
   </main>;
 }
