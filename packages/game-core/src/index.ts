@@ -87,4 +87,14 @@ export const GAME_CATALOG: readonly GameCatalogEntry[] = [
     supports: ['realtime'],
     available: true,
   },
+  {
+    slug: 'tien-gow',
+    title: '打天九',
+    shortDescription: 'Four seats, Chinese tiles, and a short hand of 天九.',
+    roomPrefix: 'TGW',
+    players: { min: 1, max: 4 },
+    estimatedMinutes: 15,
+    supports: ['turn_based'],
+    available: true,
+  },
 ];

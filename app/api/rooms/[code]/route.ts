@@ -11,7 +11,7 @@ import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
-import { isPlayroomRoomCode } from '../../../room-code';
+import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from '../../../room-code';
 import { downstairsReplayGuestIds } from '../../../room-replay';
 
 type Params = { params: Promise<{ code: string }> };
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     const normalizedCode = code.toUpperCase();
-    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const { error: expiryError } = await admin.rpc('expire_idle_rooms', { p_now: new Date().toISOString() });
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { code } = await params;
     normalizedCode = code.toUpperCase();
-    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError('Use a room code like TIK-7Q4, CON-K8P, or LAD-ZHW.', 400);
+    if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
     const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean };
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       logRoomLifecycle('ready', { roomCode: normalizedCode, guestId: guest.id });
     } else if (body.action === 'start') {
+      if (normalizedCode.startsWith('TGW-')) throw new ApiError('打天九 cannot start yet.', 400);
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       const started = await getRoomSnapshot(normalizedCode, guest.id);

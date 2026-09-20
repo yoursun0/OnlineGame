@@ -6,6 +6,7 @@ const AVAILABLE = {
   'tic-tac-toe': 'turn_based',
   'connect-four': 'turn_based',
   downstairs: 'realtime',
+  'tien-gow': 'turn_based',
 } as const;
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     if (body.mode !== expectedMode) {
       if (body.gameSlug === 'downstairs') throw new ApiError('小朋友落樓梯 is realtime only.', 400);
       if (body.gameSlug === 'connect-four') throw new ApiError('Connect Four is turn-based only.', 400);
+      if (body.gameSlug === 'tien-gow') throw new ApiError('打天九 is turn-based only.', 400);
       throw new ApiError('Tic-tac-toe is turn-based only.', 400);
     }
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';

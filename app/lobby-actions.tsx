@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { ensureGuestSession } from './lib/supabase-browser';
 import { translateError, useLanguage } from './language';
+import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from './room-code';
 
 async function callRoomApi(path: string, body: unknown) {
   const guest = await ensureGuestSession();
@@ -61,8 +62,8 @@ export function JoinRoomForm() {
     event.preventDefault();
     setBusy(true); setError('');
     const normalized = code.trim().toUpperCase();
-    if (!/^(TIK|CON|LAD)-[2-9A-HJ-NP-Z]{3}$/.test(normalized)) {
-      setError(language === 'en' ? 'Use a code like TIK-7Q4, CON-K8P, or LAD-ZHW.' : '請輸入類似 TIK-7Q4、CON-K8P 或 LAD-ZHW 的房號。');
+    if (!isPlayroomRoomCode(normalized)) {
+      setError(translateError(PLAYROOM_ROOM_CODE_HINT, language));
       setBusy(false);
       return;
     }

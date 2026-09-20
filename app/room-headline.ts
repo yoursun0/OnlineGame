@@ -77,6 +77,10 @@ export function roomHeadline(input: {
     return zh ? '等待開局（可單人即開）' : 'Waiting room — start solo anytime';
   }
 
+  if (input.gameSlug === 'tien-gow') {
+    return zh ? '等待開局（打天九大廳）' : 'Waiting room — 打天九 lobby';
+  }
+
   if (input.gameSlug === 'connect-four') {
     const state = input.state as ConnectFourState;
     if (input.status === 'playing') {

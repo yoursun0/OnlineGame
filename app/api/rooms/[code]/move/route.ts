@@ -20,6 +20,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     await enforceRateLimit(admin, guest.id, 'move', getClientIpHash(request), 12, 10);
     const { room, members } = await getRoomSnapshot(code.toUpperCase(), guest.id);
     if (room.game_slug === DOWNSTAIRS_SLUG) throw new ApiError('Realtime well traffic does not use the turn-based move path.', 400);
+    if (room.game_slug === 'tien-gow') throw new ApiError('打天九 moves are not available yet.', 400);
     const expectedVersion = body.expectedVersion ?? room.version;
     if (!Number.isInteger(expectedVersion) || expectedVersion < 0) throw new ApiError('Invalid room version.', 400);
     if (room.status !== 'playing') throw new Error('The game has not started or is already finished.');
