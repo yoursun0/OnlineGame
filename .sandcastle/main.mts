@@ -47,10 +47,15 @@ await run({
       `sandcastle/hud-${new Date().toISOString().slice(0, 10)}`,
     baseBranch: "main",
   },
-  copyToWorktree: ["node_modules"],
+  // Do NOT copy node_modules (1GB+); default copyToWorktreeMs=60s kills the run.
+  // Install fresh deps in the worktree instead.
+  copyToWorktree: [],
+  timeouts: {
+    copyToWorktreeMs: 120_000,
+    gitSetupMs: 60_000,
+  },
   hooks: {
     sandbox: {
-      // bun install is the repo package manager; safety net after copyToWorktree.
       onSandboxReady: [{ command: "bun install" }],
     },
   },
