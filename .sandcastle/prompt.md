@@ -36,18 +36,19 @@ Prefer issues also labeled `ready-for-agent`.
 2. **Plan** — decide what to change and why. Keep the change as small as possible.
 3. **Execute** — use RGR (Red → Green → Repeat → Refactor): write a failing test first, then write the implementation to pass it.
 4. **Verify** — run `bun run typecheck` and `bun test` before committing. Fix any failures before proceeding.
-5. **Commit** — make a single git commit. The message MUST:
+5. **Commit** — make a single git commit on the current Sandcastle branch. The message MUST:
    - Start with `RALPH:` prefix
    - Include the task completed and any PRD reference
    - List key decisions made
    - List files changed
    - Note any blockers for the next iteration
-6. **Close** — close the issue with `gh issue close <ID> --comment "Completed by Sandcastle (Grok)"` explaining what was done.
+6. **Pull request** — `git push -u origin HEAD`, then open a PR with `gh pr create` targeting `main`, linking the issue (`Closes #N` only if fully done). Do **not** merge the PR and do **not** push to `main`. Paddy reviews.
+7. **Issue comment** — comment on the issue with the PR URL. Leave the issue open until the PR is merged.
 
 ## Rules
 
 - Work on **one issue per iteration**. Do not attempt multiple issues in a single iteration.
-- Do not close an issue until you have committed the fix and verified tests pass.
+- Do not close an issue yourself — open a PR and leave closing to merge review.
 - Do not leave commented-out code or TODO comments in committed code.
 - Do not commit secrets. Never write `.sandcastle/.env`.
 - If you are blocked (missing context, failing tests you cannot fix, external dependency), leave a comment on the issue and move on — do not close it.

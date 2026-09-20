@@ -37,9 +37,16 @@ await run({
   }),
   sandbox,
   promptFile: "./.sandcastle/prompt.md",
-  // Keep low for smoke / manual runs. Raise when intentionally AFK-looping.
+  // AFK runs: raise via SANDCASTLE_MAX_ITERATIONS (default 1 for smoke).
   maxIterations: Number(process.env.SANDCASTLE_MAX_ITERATIONS ?? "1"),
-  branchStrategy: { type: "merge-to-head" },
+  // Named branch — Paddy reviews PR; do not auto-merge to main.
+  branchStrategy: {
+    type: "branch",
+    branch:
+      process.env.SANDCASTLE_BRANCH ??
+      `sandcastle/hud-${new Date().toISOString().slice(0, 10)}`,
+    baseBranch: "main",
+  },
   copyToWorktree: ["node_modules"],
   hooks: {
     sandbox: {
