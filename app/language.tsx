@@ -47,6 +47,7 @@ const errorTranslations: Record<string, string> = {
   'Use a room code like TIK-7Q4, CON-K8P, LAD-ZHW, or TGW-4K8.': '請輸入類似 TIK-7Q4、CON-K8P、LAD-ZHW 或 TGW-4K8 的房號。',
   '打天九 is turn-based only.': '打天九只支援回合制。',
   '打天九 cannot start yet.': '打天九尚未開放開局。',
+  'A 打天九 table needs 1–4 humans.': '打天九一桌需要 1 至 4 位玩家。',
   '打天九 moves are not available yet.': '打天九尚未開放落子。',
   '小朋友落樓梯 is realtime only.': '小朋友落樓梯只支援即時模式。',
   'Only the host simulator may write Checkpoints.': '只有房主模擬器可以寫入 Checkpoint。',

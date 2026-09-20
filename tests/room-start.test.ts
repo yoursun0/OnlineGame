@@ -74,7 +74,7 @@ test('a downstairs Shared well can start with 4 ready humans', () => {
   })).toBe(true);
 });
 
-test('a TGW lobby cannot start until the four-seat fill issue lands', () => {
+test('a TGW solo host can start without waiting for three more humans', () => {
   expect(canHostStartRoom({
     status: 'open',
     hostGuestId: 'host',
@@ -82,7 +82,7 @@ test('a TGW lobby cannot start until the four-seat fill issue lands', () => {
     members: [{ is_ready: false }],
     maxPlayers: 4,
     gameSlug: 'tien-gow',
-  })).toBe(false);
+  })).toBe(true);
 });
 
 test('a downstairs room with 3 humans cannot start until every human is ready', () => {

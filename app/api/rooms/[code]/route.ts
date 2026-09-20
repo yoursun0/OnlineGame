@@ -8,6 +8,7 @@ import {
   isDownstairsRoomState,
 } from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
+import { createHand } from '@playroom/tien-gow';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
@@ -79,11 +80,26 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       logRoomLifecycle('ready', { roomCode: normalizedCode, guestId: guest.id });
     } else if (body.action === 'start') {
-      if (normalizedCode.startsWith('TGW-')) throw new ApiError('打天九 cannot start yet.', 400);
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       const started = await getRoomSnapshot(normalizedCode, guest.id);
-      if (started.room.game_slug === DOWNSTAIRS_SLUG) {
+      if (started.room.game_slug === 'tien-gow') {
+        const humans = started.members.filter((member) => !member.is_cpu);
+        if (humans.length < 1 || humans.length > 4 || started.members.length !== 4) {
+          throw new ApiError('A 打天九 table needs 1–4 humans.', 400);
+        }
+        const initial = createHand({ seed: `tgw:${normalizedCode}` });
+        const { error: startEventError } = await admin.rpc('append_game_event', {
+          p_room_id: started.room.id,
+          p_guest_id: guest.id,
+          p_expected_version: started.room.version,
+          p_state: initial,
+          p_status: 'playing',
+          p_event_type: 'start',
+          p_payload: { seats: 4, humans: humans.length },
+        });
+        if (startEventError) throw startEventError;
+      } else if (started.room.game_slug === DOWNSTAIRS_SLUG) {
         const humans = started.members
           .filter((member) => !member.is_cpu)
           .sort((a, b) => a.seat - b.seat);

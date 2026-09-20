@@ -78,6 +78,9 @@ export function roomHeadline(input: {
   }
 
   if (input.gameSlug === 'tien-gow') {
+    if (input.status === 'playing') {
+      return zh ? '牌局已開 — 座位已隨機分配' : 'Table seated — seats shuffled';
+    }
     return zh ? '等待開局（打天九大廳）' : 'Waiting room — 打天九 lobby';
   }
 
