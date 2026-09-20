@@ -9,6 +9,7 @@
         "@playroom/downstairs": "workspace:*",
         "@playroom/game-core": "workspace:*",
         "@playroom/tic-tac-toe": "workspace:*",
+        "@playroom/tien-gow": "workspace:*",
         "@supabase/supabase-js": "^2.115.0",
         "next": "^16.3.4",
         "react": "^19.2.8",
@@ -41,6 +42,13 @@
     },
     "games/tic-tac-toe": {
       "name": "@playroom/tic-tac-toe",
+      "version": "0.1.0",
+      "dependencies": {
+        "@playroom/game-core": "workspace:*",
+      },
+    },
+    "games/tien-gow": {
+      "name": "@playroom/tien-gow",
       "version": "0.1.0",
       "dependencies": {
         "@playroom/game-core": "workspace:*",
@@ -341,6 +349,8 @@
     "@playroom/game-core": ["@playroom/game-core@workspace:packages/game-core"],
 
     "@playroom/tic-tac-toe": ["@playroom/tic-tac-toe@workspace:games/tic-tac-toe"],
+
+    "@playroom/tien-gow": ["@playroom/tien-gow@workspace:games/tien-gow"],
 
     "@renovatebot/pep440": ["@renovatebot/pep440@4.2.1", "", {}, "sha512-2FK1hF93Fuf1laSdfiEmJvSJPVIDHEUTz68D3Fi9s0IZrrpaEcj6pTFBTbYvsgC5du4ogrtf5re7yMMvrKNgkw=="],
 

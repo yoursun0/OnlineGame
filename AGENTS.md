@@ -10,7 +10,7 @@ Read `docs/REPOSITORY-ARCHITECTURE.md` for the repository map and `PLAN.md` for 
 
 - Keep platform code in `app/`, shared contracts in `packages/`, game-specific code in `games/`, and database/deployment work in `supabase/`.
 - Keep each game's rules in its own `games/<slug>/rules.md`; treat that file as the game rules source of truth.
-- Use game-specific room prefixes from `docs/REPOSITORY-ARCHITECTURE.md`: `TIK`, `LAD`, and `CON`.
+- Use game-specific room prefixes from `docs/REPOSITORY-ARCHITECTURE.md`: `TIK`, `LAD`, `CON`, and `TGW`.
 - Keep `prototype/` as a disposable, local-only experience reference until a production app replaces it.
 
 ## Change workflow

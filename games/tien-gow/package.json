@@ -1,0 +1,7 @@
+{
+  "name": "@playroom/tien-gow",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": { "@playroom/game-core": "workspace:*" },
+  "exports": { ".": "./src/index.ts" }
+}
