@@ -7,17 +7,20 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "sandcastle": "bash -c 'if [ -f .sandcastle/.env ]; then set -a; . .sandcastle/.env; set +a; fi; exec bun .sandcastle/main.mts'"
   },
   "workspaces": [
     "games/*",
     "packages/*"
   ],
   "devDependencies": {
+    "@ai-hero/sandcastle": "^0.12.0",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "supabase": "^2.116.0",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vercel": "^59.11.7"
   },
