@@ -4,7 +4,7 @@
 - Room prefix: `TGW`
 - Players: 4, empty seats filled with CPU
 - Mode: turn-based only
-- Status: engine + `/lab/tien-gow`. `TGW` rooms are a separate issue.
+- Status: engine + `/lab/tien-gow`. Playroom catalogue registers `TGW` rooms (lobby-only until CPU fill + engine wiring).
 
 `rules.md` — play.
 `SPEC.md` — TDD implementation.

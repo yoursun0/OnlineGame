@@ -7,6 +7,8 @@ export function canHostStartRoom(input: {
   gameSlug?: string;
 }) {
   if (input.status !== 'open' || input.hostGuestId !== input.guestId) return false;
+  // Lobby-only until AFK G4 CPU fill + random seats (#43).
+  if (input.gameSlug === 'tien-gow') return false;
   const humans = input.members.filter((member) => !member.is_cpu);
   if (humans.length === 1) return true;
   if (input.gameSlug === 'downstairs') {

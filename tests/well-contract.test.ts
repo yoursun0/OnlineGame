@@ -23,11 +23,12 @@ const well: WellState = {
   stairs: [{ id: 1, x: 18, y: 168, w: 108, kind: 'normal' }],
 };
 
-test('the catalogue exposes turn-based boards and the realtime downstairs well', () => {
+test('the catalogue exposes turn-based boards, the realtime downstairs well, and 打天九', () => {
   expect(GAME_CATALOG.map((game) => [game.slug, game.supports, game.available, game.roomPrefix, game.players])).toEqual([
     ['tic-tac-toe', ['turn_based'], true, 'TIK', { min: 2, max: 2 }],
     ['connect-four', ['turn_based'], true, 'CON', { min: 2, max: 2 }],
     ['downstairs', ['realtime'], true, 'LAD', { min: 1, max: 4 }],
+    ['tien-gow', ['turn_based'], true, 'TGW', { min: 1, max: 4 }],
   ]);
 });
 

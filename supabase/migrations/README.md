@@ -17,6 +17,7 @@ Current order:
 11. `20260919000200_downstairs_shared_3_4_kids.sql` — Shared join/start for 3–4 kids.
 12. `20260919000300_host_leave_keeps_finished.sql` — finished rooms keep status when host leaves.
 13. `20260920000100_downstairs_room_replay.sql` — LAD same-room rematch without requiring a full room.
+14. `20260920000200_tien_gow_rooms.sql` — allow 打天九 rooms with `TGW-` codes (lobby, max 4, no deal yet).
 
 Apply and verify against an explicit target:
 
