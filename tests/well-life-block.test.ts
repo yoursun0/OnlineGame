@@ -66,17 +66,14 @@ test('WellLifeBlock renders 12 segments with filled count equal to life', () => 
   expect(mid).toContain('aria-label="Life 5, 2 floors"');
 });
 
-test('downstairs HUD uses WellLifeBlock for in-run and Game Over', async () => {
+test('downstairs HUD uses WellHudBar (WellLifeBlock via seats) for in-run and Game Over', async () => {
   const well = await readFile(new URL('../app/downstairs-well.tsx', import.meta.url), 'utf8');
-  expect(well).toContain("import { WellLifeBlock } from './well-life-block'");
-  expect(well).toContain('<WellLifeBlock');
-  expect(well).toContain('label={zh ? \'生命\' : \'Life\'}');
-  expect(well).toContain('life={life}');
-  expect(well).toContain('floor={depth}');
-  expect(well).toContain('{over ? (');
+  expect(well).toContain("from './well-hud-bar'");
+  expect(well).toContain('<WellHudBar');
+  expect(well).toContain('seats={hud.seats}');
+  expect(well).toContain('depth={hud.depth}');
   expect(well).toContain('well-hud-over');
   expect(well).toContain('className="well-over"');
-  // #34: Game Over no longer uses plain life/floor text spans as primary stats
   expect(well).not.toContain("<span>{zh ? '生命' : 'Life'} {life}</span>");
   expect(well).not.toContain("<span>{zh ? '樓層' : 'Floors'} {depth}</span>");
 });
