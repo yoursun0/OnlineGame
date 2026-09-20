@@ -12,6 +12,7 @@ import { createHand } from '@playroom/tien-gow';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
+import { projectTienGowSnapshot } from '../../_lib/tien-gow-room';
 import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from '../../../room-code';
 import { downstairsReplayGuestIds } from '../../../room-replay';
 
@@ -44,11 +45,14 @@ export async function GET(request: NextRequest, { params }: Params) {
     const sinceRaw = new URL(request.url).searchParams.get('since');
     const sinceVersion = sinceRaw === null ? 0 : Number(sinceRaw);
     if (!Number.isInteger(sinceVersion) || sinceVersion < 0 || sinceVersion > 1000000) throw new ApiError('Invalid event version.', 400);
-    return Response.json(await snapshotAfterCpuTurn(
-      await getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
-      () => getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
-      undefined,
-      normalizedCode,
+    return Response.json(projectTienGowSnapshot(
+      await snapshotAfterCpuTurn(
+        await getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
+        () => getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
+        undefined,
+        normalizedCode,
+      ),
+      guest.id,
     ));
   } catch (error) {
     logApiFailure('/api/rooms/[code]', error);
@@ -190,11 +194,14 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else {
       throw new Error('Unknown room action.');
     }
-    return Response.json(await snapshotAfterCpuTurn(
-      await getRoomSnapshot(normalizedCode!, guest.id),
-      () => getRoomSnapshot(normalizedCode!, guest.id),
-      undefined,
-      normalizedCode,
+    return Response.json(projectTienGowSnapshot(
+      await snapshotAfterCpuTurn(
+        await getRoomSnapshot(normalizedCode!, guest.id),
+        () => getRoomSnapshot(normalizedCode!, guest.id),
+        undefined,
+        normalizedCode,
+      ),
+      guest.id,
     ));
   } catch (error) {
     logApiFailure(`/api/rooms/[code]#${action}`, error, normalizedCode);

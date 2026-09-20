@@ -225,6 +225,39 @@ h1, h2, h3, p { margin-top: 0; }
 .waiting-mark-connect { color: #45e3d0; font-size: clamp(42px, 8vw, 88px); letter-spacing: .08em; }
 .waiting-mark-well { color: #7eec6a; font-size: clamp(48px, 9vw, 110px); letter-spacing: .02em; }
 .waiting-mark-tiengow { color: var(--lilac); font-size: clamp(42px, 8vw, 88px); letter-spacing: .04em; }
+.tgw-play {
+  --soot: #140c09;
+  --lacquer: #2b1610;
+  --rosewood: #6a3122;
+  --ivory: #f4e7c8;
+  --cinnabar: #c51d1d;
+  --brass: #d0a85a;
+  --tea: #b08958;
+  --ink: #1b120e;
+  --mist: rgba(244, 231, 200, .62);
+  --display: "Songti TC", "Noto Serif TC", "Iowan Old Style", serif;
+  --body: "Avenir Next", "PingFang TC", "Noto Sans TC", sans-serif;
+  --bone-w: 48px;
+  --bone-h: 80px;
+  --bone-gap: 6px;
+  width: min(100%, 720px);
+  color: var(--ivory);
+}
+.tgw-play .tgw-board {
+  min-height: 280px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.tgw-play .tgw-hand { margin-top: 0; }
+.tgw-play-grid {
+  display: grid;
+  grid-template-columns: repeat(8, var(--bone-w));
+  grid-auto-rows: var(--bone-h);
+  gap: var(--bone-gap);
+  justify-content: start;
+  margin-top: 10px;
+  overflow-x: auto;
+}
 @keyframes connect-token-drop { 0% { transform: translateY(-160%); } 55% { transform: translateY(10%); } 76% { transform: translateY(-4%); } 100% { transform: translateY(0); } }
 @keyframes connect-winner-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 @keyframes connect-sheen { 0%, 72%, 100% { transform: translateX(-120%); } 84% { transform: translateX(120%); } }
@@ -236,7 +269,7 @@ h1, h2, h3, p { margin-top: 0; }
   .game-grid { grid-template-columns: 1fr 1fr; }
   .room-layout { grid-template-columns: 1fr; gap: 34px; }
   .room-sidebar { max-width: 560px; }
-  .board, .waiting-mark, .connect-play { width: min(100%, 560px); }
+  .board, .waiting-mark, .connect-play, .tgw-play { width: min(100%, 560px); }
 }
 
 @media (max-width: 620px) {

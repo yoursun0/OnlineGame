@@ -1,5 +1,6 @@
 import { connectFour, getWinner as getConnectWinner, type Color, type ConnectFourState } from '@playroom/connect-four';
 import { getWinner, ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
+import { tienGowSeatWind } from './tien-gow-seats';
 
 type HeadlineMember = { seat: number; display_name: string; guest_id?: string };
 
@@ -79,6 +80,17 @@ export function roomHeadline(input: {
 
   if (input.gameSlug === 'tien-gow') {
     if (input.status === 'playing') {
+      const state = input.state as { phase?: string; toAct?: number; jieSeat?: number | null };
+      if (state.phase === 'recap') {
+        const wind = tienGowSeatWind(state.jieSeat ?? 0, input.language);
+        return zh ? `結 — ${wind}` : `Hand over — ${wind} 結`;
+      }
+      if (typeof state.toAct === 'number') {
+        const wind = tienGowSeatWind(state.toAct, input.language);
+        const name = input.members.find((member) => member.seat === state.toAct)?.display_name.trim();
+        const label = name ? `${wind} · ${name}` : wind;
+        return zh ? `輪到: ${label}` : `Turn: ${label}`;
+      }
       return zh ? '牌局已開 — 座位已隨機分配' : 'Table seated — seats shuffled';
     }
     return zh ? '等待開局（打天九大廳）' : 'Waiting room — 打天九 lobby';
