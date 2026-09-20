@@ -579,11 +579,15 @@ export function DownstairsWell({
 
   return (
     <div className="well-play">
-      <div className="well-hud">
+      <div className={over ? 'well-hud well-hud-over' : 'well-hud'}>
         {over ? (
           <>
-            <span>{zh ? '生命' : 'Life'} {life}</span>
-            <span>{zh ? '樓層' : 'Floors'} {depth}</span>
+            <WellLifeBlock
+              label={zh ? '生命' : 'Life'}
+              life={life}
+              floor={depth}
+              language={language}
+            />
             {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
             <span className="well-over">{resultLabel}</span>
           </>

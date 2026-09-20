@@ -271,6 +271,21 @@ h1, h2, h3, p { margin-top: 0; }
 .well-play { display: grid; gap: 12px; justify-items: center; width: min(100%, 420px); }
 .well-canvas { width: min(100%, 360px); height: auto; border-radius: 18px; border: 1px solid var(--line); box-shadow: var(--shadow); background: #0c3a78; image-rendering: pixelated; }
 .well-hud { display: flex; gap: 16px; align-items: flex-end; font-family: var(--display); letter-spacing: .04em; }
+.well-hud-over {
+  width: min(100%, 360px);
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.well-hud-over .well-over {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 113, 91, .16);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
 .well-over { color: var(--coral); }
 .well-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .well-life-block { width: 92px; flex: 0 0 92px; }

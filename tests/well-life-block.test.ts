@@ -66,7 +66,7 @@ test('WellLifeBlock renders 12 segments with filled count equal to life', () => 
   expect(mid).toContain('aria-label="Life 5, 2 floors"');
 });
 
-test('in-run downstairs HUD uses WellLifeBlock and leaves game-over text alone', async () => {
+test('downstairs HUD uses WellLifeBlock for in-run and Game Over', async () => {
   const well = await readFile(new URL('../app/downstairs-well.tsx', import.meta.url), 'utf8');
   expect(well).toContain("import { WellLifeBlock } from './well-life-block'");
   expect(well).toContain('<WellLifeBlock');
@@ -74,8 +74,11 @@ test('in-run downstairs HUD uses WellLifeBlock and leaves game-over text alone',
   expect(well).toContain('life={life}');
   expect(well).toContain('floor={depth}');
   expect(well).toContain('{over ? (');
-  expect(well).toContain("<span>{zh ? '生命' : 'Life'} {life}</span>");
-  expect(well).toContain("<span>{zh ? '樓層' : 'Floors'} {depth}</span>");
+  expect(well).toContain('well-hud-over');
+  expect(well).toContain('className="well-over"');
+  // #34: Game Over no longer uses plain life/floor text spans as primary stats
+  expect(well).not.toContain("<span>{zh ? '生命' : 'Life'} {life}</span>");
+  expect(well).not.toContain("<span>{zh ? '樓層' : 'Floors'} {depth}</span>");
 });
 
 test('PLAYROOM CSS copies prototype LifeBlock tokens and size', async () => {
