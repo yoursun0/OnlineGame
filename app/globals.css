@@ -277,6 +277,22 @@ h1, h2, h3, p { margin-top: 0; }
   color: var(--brass);
   font-size: 13px;
 }
+.tgw-lobby-setup { width: min(100%, 720px); }
+.tgw-lobby-setup .waiting-mark { width: auto; margin-bottom: 16px; }
+.tgw-play .tgw-table-card { margin-top: 8px; }
+.tgw-play .tgw-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tgw-table-summary {
+  margin: 0 0 10px;
+  color: var(--tea, #b08958);
+  font-size: 12px;
+  letter-spacing: .03em;
+  line-height: 1.45;
+}
+.tgw-play .tgw-recap {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+}
+.tgw-play .tgw-recap .tgw-actions { margin-top: 10px; }
 @keyframes tgw-clock-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: .55; }

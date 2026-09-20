@@ -9,6 +9,7 @@ export function canShowRoomReplay(input: {
   hostStillPresent: boolean;
 }) {
   if (input.status !== 'finished' || !input.isMember) return false;
+  if (input.gameSlug === 'tien-gow') return false;
   if (input.gameSlug === 'downstairs') {
     // Same-room rematch like CF: any remaining member may press Replay while
     // the host simulator is still seated. Occupancy may be Solo (1) or Shared (2–4);

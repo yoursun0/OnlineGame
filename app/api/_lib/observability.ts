@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-type RoomLifecycleAction = 'create' | 'join' | 'ready' | 'start' | 'leave' | 'report' | 'move' | 'replay' | 'checkpoint' | 'finish';
+type RoomLifecycleAction = 'create' | 'join' | 'ready' | 'start' | 'leave' | 'report' | 'move' | 'replay' | 'checkpoint' | 'finish' | 'table';
 
 function guestHash(guestId: string) {
   return createHash('sha256').update(guestId).digest('hex').slice(0, 16);

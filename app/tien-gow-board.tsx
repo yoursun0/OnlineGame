@@ -11,6 +11,7 @@ import {
 } from '@playroom/tien-gow';
 import { BoneTile } from './lab/tien-gow/tile';
 import { tienGowSeatWind, tienGowViewportLayout } from './tien-gow-seats';
+import { TienGowTableSummary } from './tien-gow-table-options';
 import { tienGowTurnActor, tienGowTurnClockKey, tienGowTurnClockView } from './tien-gow-turn-clock';
 import type { Language } from './language';
 import './lab/tien-gow/lab.css';
@@ -26,6 +27,10 @@ export function TienGowBoard({
   isHost = false,
   clockNow,
   clockStartedAt,
+  onNext,
+  onRematch,
+  canDeal = false,
+  dealBusy = false,
 }: {
   view: View;
   members: BoardMember[];
@@ -35,6 +40,10 @@ export function TienGowBoard({
   isHost?: boolean;
   clockNow?: number;
   clockStartedAt?: number;
+  onNext?: () => void;
+  onRematch?: () => void;
+  canDeal?: boolean;
+  dealBusy?: boolean;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const zh = language === 'zh-Hant';
@@ -108,6 +117,17 @@ export function TienGowBoard({
         : (zh ? `${tienGowSeatWind(view.toAct, language)} 出牌中` : `${tienGowSeatWind(view.toAct, language)} to act`);
   const statusWithClock = clock.remainingLabel ? `${status} · ${clock.remainingLabel}` : status;
   const warn = clock.phase === 'warn';
+  const recap = view.phase === 'recap' ? view.recap : null;
+  const recapFlags = recap
+    ? [
+      recap.flags.example,
+      recap.flags.slam === 'seven' ? '七支' : recap.flags.slam === 'eight' ? '八支' : recap.flags.slam,
+      recap.flags.baoHonor ? '包尊' : null,
+      recap.flags.fourBao ? '四大包' : null,
+      recap.flags.yaoJie ? '么結' : null,
+      recap.flags.yaoCapture ? '么雙擒四' : null,
+    ].filter(Boolean)
+    : [];
 
   return (
     <div className="tgw-play" data-clock={clock.phase}>
@@ -152,6 +172,45 @@ export function TienGowBoard({
       {view.toasts[0] ? <div className="tgw-toast" role="status">{view.toasts[0].title} · {view.toasts[0].detail}</div> : null}
       {clock.toast ? <div className="tgw-clock-toast" role="status" aria-live="polite">{clock.toast}</div> : null}
       {clock.nudge ? <p className="tgw-clock-nudge" role="status">{clock.nudge}</p> : null}
+      <TienGowTableSummary table={view.table} language={language} />
+
+      {recap ? (
+        <div className="tgw-recap" aria-label={zh ? '結' : 'Hand recap'}>
+          <p className="tgw-kicker">{zh ? '結' : 'Settle'}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>{zh ? '座位' : 'Seat'}</th>
+                <th>{zh ? '棟' : 'Dong'}</th>
+                <th>{zh ? '籌碼' : 'Chips'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[0, 1, 2, 3].map((seat) => (
+                <tr key={seat}>
+                  <td>
+                    {tienGowSeatWind(seat, language)}
+                    {recap.jieSeat === seat ? ' 結' : ''}
+                    {view.bankerSeat === seat ? (zh ? ' 莊' : ' Banker') : ''}
+                    {seat === view.seat ? (zh ? ' 你' : ' You') : ''}
+                  </td>
+                  <td>{recap.dong[seat]}</td>
+                  <td>{view.chips[seat]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p>
+            {recapFlags.join(' · ')}
+            {recapFlags.length > 0 && recap.payments.length > 0 ? ' ' : ''}
+            {recap.payments.map((payment) => `${tienGowSeatWind(payment.from, language)}→${tienGowSeatWind(payment.to, language)} ${payment.amount}`).join(' · ')}
+          </p>
+          <div className="tgw-actions">
+            <button className="tgw-btn" type="button" disabled={!canDeal || dealBusy} onClick={onNext}>{zh ? '下一局' : 'Next hand'}</button>
+            <button className="tgw-btn ghost" type="button" disabled={!canDeal || dealBusy} onClick={onRematch}>{zh ? '重開牌局' : 'Rematch'}</button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="tgw-hand tgw-play-hand" data-viewer-seat={view.seat}>
         <p className="tgw-kicker">{zh ? '你的手牌' : 'Your hand'} · {selectedCombo ? selectedCombo.label : (zh ? '點牌組成一套' : 'Select a combination')}</p>

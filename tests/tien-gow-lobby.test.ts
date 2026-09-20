@@ -152,7 +152,7 @@ test('the room start API deals a TGW hand and no longer blocks start', async () 
   const route = await readFile(new URL('../app/api/rooms/[code]/route.ts', import.meta.url), 'utf8');
   expect(route).not.toContain("normalizedCode.startsWith('TGW-')");
   expect(route).not.toContain('打天九 cannot start yet.');
-  expect(route).toContain("createHand");
+  expect(route).toContain("dealPlayroomHand");
   expect(route).toContain("started.room.game_slug === 'tien-gow'");
 });
 
