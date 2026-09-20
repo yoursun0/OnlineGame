@@ -3,13 +3,44 @@ import { shuffle } from '@playroom/tien-gow';
 export const TGW_SEAT_COUNT = 4;
 
 /**
- * Absolute Playroom / lab seats, counterclockwise:
+ * Absolute Playroom / lab seats, counterclockwise from above:
  * 0 = 南 South, 1 = 東 East, 2 = 北 North, 3 = 西 West.
- * Random permutation is applied at host start; seat-relative layout is a later issue.
+ * Random permutation is applied at host start.
+ *
+ * Playroom orients the table from `viewerSeat` so that seat is always at the
+ * bottom of the viewport. CSS classes `south`/`east`/`north`/`west` are
+ * viewport grid areas (bottom/right/top/left), not absolute winds.
+ *
+ * Helic: viewerSeat=3 (West) → bottom=West, left=North, top=East, right=South.
  */
 export const TGW_SEAT_WINDS = ['south', 'east', 'north', 'west'] as const;
 export const TGW_SEAT_WIND_ZH = ['南', '東', '北', '西'] as const;
 export const TGW_SEAT_WIND_EN = ['South', 'East', 'North', 'West'] as const;
+export const TGW_VIEWPORT_REGIONS = ['bottom', 'right', 'top', 'left'] as const;
+
+export type TienGowViewportRegion = (typeof TGW_VIEWPORT_REGIONS)[number];
+export type TienGowViewportPlace = (typeof TGW_SEAT_WINDS)[number];
+
+export const TGW_VIEWPORT_PLACE = {
+  bottom: 'south',
+  right: 'east',
+  top: 'north',
+  left: 'west',
+} as const satisfies Record<TienGowViewportRegion, TienGowViewportPlace>;
+
+export type TienGowViewportSlot = {
+  seat: number;
+  region: TienGowViewportRegion;
+  place: TienGowViewportPlace;
+};
+
+export function tienGowViewportLayout(viewerSeat: number): TienGowViewportSlot[] {
+  const origin = ((viewerSeat % TGW_SEAT_COUNT) + TGW_SEAT_COUNT) % TGW_SEAT_COUNT;
+  return TGW_VIEWPORT_REGIONS.map((region, offset) => {
+    const seat = (origin + offset) % TGW_SEAT_COUNT;
+    return { seat, region, place: TGW_VIEWPORT_PLACE[region] };
+  });
+}
 
 export function tienGowSeatWind(seat: number, language: 'en' | 'zh-Hant'): string {
   const index = ((seat % TGW_SEAT_COUNT) + TGW_SEAT_COUNT) % TGW_SEAT_COUNT;

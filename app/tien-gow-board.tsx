@@ -10,18 +10,11 @@ import {
   type View,
 } from '@playroom/tien-gow';
 import { BoneTile } from './lab/tien-gow/tile';
-import { tienGowSeatWind } from './tien-gow-seats';
+import { tienGowSeatWind, tienGowViewportLayout } from './tien-gow-seats';
 import type { Language } from './language';
 import './lab/tien-gow/lab.css';
 
 type BoardMember = { guest_id: string; display_name: string; seat: number; is_cpu?: boolean };
-
-const SEAT_PLACE = [
-  { seat: 0, place: 'south' },
-  { seat: 1, place: 'east' },
-  { seat: 2, place: 'north' },
-  { seat: 3, place: 'west' },
-] as const;
 
 export function TienGowBoard({
   view,
@@ -49,6 +42,7 @@ export function TienGowBoard({
   const canBeat = Boolean(ownTurn && view.phase === 'follow' && selectedCombo && legal.some((move) => move.type === 'beat' && sameMove(move, { type: 'beat', tiles: selected })));
   const canDump = Boolean(ownTurn && view.phase === 'follow' && legal.some((move) => move.type === 'dump' && sameMove(move, { type: 'dump', tiles: selected })));
   const hand = sortHandDisplay(view.hand);
+  const layout = tienGowViewportLayout(view.seat);
 
   function play(move: Move) {
     if (!ownTurn) return;
@@ -71,12 +65,12 @@ export function TienGowBoard({
 
   return (
     <div className="tgw-play">
-      <section className="tgw-board tgw-play-board" aria-label={zh ? '牌桌' : 'Table felt'}>
-        {SEAT_PLACE.map(({ seat, place }) => {
+      <section className="tgw-board tgw-play-board" aria-label={zh ? '牌桌' : 'Table felt'} data-viewer-seat={view.seat}>
+        {layout.map(({ seat, place, region }) => {
           const member = members.find((candidate) => candidate.seat === seat);
           const self = seat === view.seat;
           return (
-            <div className={`tgw-seat ${place}${view.phase !== 'recap' && view.toAct === seat ? ' to-act' : ''}`} data-seat={seat} key={seat}>
+            <div className={`tgw-seat ${place}${view.phase !== 'recap' && view.toAct === seat ? ' to-act' : ''}`} data-seat={seat} data-region={region} key={seat}>
               <div className="tgw-seat-meta">
                 <strong>{tienGowSeatWind(seat, language)}</strong>
                 {self ? <span>{zh ? '你' : 'You'}</span> : null}
@@ -90,10 +84,10 @@ export function TienGowBoard({
         <div className="tgw-center">
           <div className="tgw-trick-board">
             <strong className="tgw-status">{status}</strong>
-            {SEAT_PLACE.map(({ seat, place }) => {
+            {layout.map(({ seat, place, region }) => {
               const playOnTable = view.trick?.plays.find((item) => item.seat === seat);
               return (
-                <div className={`tgw-trick-slot ${place}`} data-trick-seat={seat} key={`trick-${seat}`}>
+                <div className={`tgw-trick-slot ${place}`} data-trick-seat={seat} data-region={region} key={`trick-${seat}`}>
                   {playOnTable
                     ? playOnTable.type === 'dump'
                       ? Array.from({ length: playOnTable.count }, (_, index) => (
