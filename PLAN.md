@@ -1,7 +1,7 @@
 # PLAYROOM — anonymous online game portal
 
 > Working name: **PLAYROOM** / **玩房**  
-> Current status: production Tic-tac-toe vertical slice deployed on Vercel with a separate Supabase production project. Connect Four / 四子棋 is implemented in-repo (`CON-` rooms, CPU or human opponent) and needs the Connect Four migration on each target before it can be created. 打天九 is in the Playroom catalogue as Game 4 (`TGW-` rooms, 1–4 humans, table always 4 seats); the lobby fills empty seats with CPU and shuffles seats 0–3 (南/東/北/西) at start. Engine wiring (moves, `projectView`, multi-CPU drain) is a later issue. `prototype/` remains a disposable visual reference.
+> Current status: production Tic-tac-toe vertical slice deployed on Vercel with a separate Supabase production project. Connect Four / 四子棋 is implemented in-repo (`CON-` rooms, CPU or human opponent) and needs the Connect Four migration on each target before it can be created. 打天九 is in the Playroom catalogue as Game 4 (`TGW-` rooms, 1–4 humans, table always 4 seats); the lobby fills empty seats with CPU and shuffles seats 0–3 (南/東/北/西) at start. Playing rooms persist the lab reducer, return `projectView` per viewer, and drain CPU seats until a human or recap. Seat-relative layout, human warn-only clock, and rematch chrome are later issues. `prototype/` remains a disposable visual reference.
 
 ## 1. Product thesis
 

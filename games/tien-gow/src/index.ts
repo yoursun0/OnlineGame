@@ -54,4 +54,4 @@ export {
   type TileId,
 } from './tiles';
 export { fillHands, getUatFixture, UAT_FIXTURE_IDS, type UatFixture, type UatFixtureId } from './uat-fixtures';
-export { projectView, type View, type ViewPlay } from './view';
+export { isTienGowView, projectView, type View, type ViewPlay } from './view';

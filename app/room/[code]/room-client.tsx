@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectFourBoard } from '../../connect-four-board';
 import { DownstairsWell } from '../../downstairs-well';
+import { TienGowBoard } from '../../tien-gow-board';
 import type { ConnectFourState } from '@playroom/connect-four';
 import { isDownstairsRoomState, type DownstairsRoomState } from '@playroom/downstairs';
 import type { TicTacToeState } from '@playroom/tic-tac-toe';
+import { isTienGowView, type Move as TienGowMove, type View as TienGowView } from '@playroom/tien-gow';
 import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-browser';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
@@ -14,7 +16,7 @@ import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
 import { tienGowLobbySlots, tienGowSeatMark, tienGowSeatWind } from '../../tien-gow-seats';
 
-type GameState = TicTacToeState | ConnectFourState | DownstairsRoomState;
+type GameState = TicTacToeState | ConnectFourState | DownstairsRoomState | TienGowView;
 type Room = { id: string; code: string; game_slug: string; mode: 'realtime' | 'turn_based'; status: 'open' | 'playing' | 'finished' | 'expired'; host_guest_id: string; state: GameState; version: number; max_players: number };
 type Member = { guest_id: string; display_name: string; seat: number; is_ready: boolean; is_cpu?: boolean };
 type Snapshot = { room: Room; members: Member[]; events: Array<{ version: number; event_type: string }> };
@@ -30,7 +32,11 @@ async function fetchSnapshot(code: string, sinceVersion = 0) {
 }
 
 function isOwnTurn(room: Room, seat: number) {
-  if (room.game_slug === 'downstairs' || room.game_slug === 'tien-gow') return false;
+  if (room.game_slug === 'downstairs') return false;
+  if (room.game_slug === 'tien-gow') {
+    const state = room.state as TienGowView;
+    return state.phase !== 'recap' && state.toAct === seat;
+  }
   if (room.game_slug === 'connect-four') {
     const state = room.state as ConnectFourState;
     return (state.nextColor === 'red' && seat === 0) || (state.nextColor === 'yellow' && seat === 1);
@@ -65,7 +71,7 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? 'Solo alone, or invite up to three friends for a Shared well (max 4). Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish. Joins after start are rejected.'
       : isTienGow
-        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Min 1 human; 2–4 humans must all be ready.'
+        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Each human only sees their own hand; CPU seats play immediately. Min 1 human; 2–4 humans must all be ready.'
         : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
@@ -79,7 +85,7 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? '可單人即開 Solo 井，或邀請最多三位朋友開 Shared 共用井（最多 4 人）。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。開局後無法再加入。'
       : isTienGow
-        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。至少 1 人即可開；2–4 人時全員要準備。'
+        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。每位玩家只看見自己的手牌；電腦座位會立刻出牌。至少 1 人即可開；2–4 人時全員要準備。'
         : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
@@ -126,7 +132,7 @@ export function RoomClient({ code }: { code: string }) {
     finally { setBusy(false); }
   }
 
-  async function playMove(body: { cell?: number; column?: number }) {
+  async function playMove(body: { cell?: number; column?: number } | TienGowMove) {
     setBusy(true); setError('');
     try {
       const response = await fetch(`/api/rooms/${code}/move`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
@@ -172,7 +178,16 @@ export function RoomClient({ code }: { code: string }) {
   if (!snapshot) return <main className="room-shell"><div className="room-header"><Brand /><LanguageToggle /></div><p className="room-loading">{text.loading}</p></main>;
 
   const downstairsState = isDownstairs && isDownstairsRoomState(snapshot.room.state) ? snapshot.room.state : null;
-  const board = (snapshot.room.status === 'playing' || snapshot.room.status === 'finished') && !isTienGow
+  const tienGowView = isTienGow && isTienGowView(snapshot.room.state) ? snapshot.room.state : null;
+  const board = isTienGow && snapshot.room.status === 'playing' && tienGowView
+    ? <TienGowBoard
+        view={tienGowView}
+        members={snapshot.members}
+        onMove={(move) => void playMove(move)}
+        disabled={busy || !ownTurn}
+        language={language}
+      />
+    : (snapshot.room.status === 'playing' || snapshot.room.status === 'finished') && !isTienGow
     ? isDownstairs && downstairsState
       ? <DownstairsWell
           key={`well-${snapshot.room.version}`}
@@ -194,7 +209,7 @@ export function RoomClient({ code }: { code: string }) {
       : isConnect
         ? <ConnectFourBoard state={snapshot.room.state as ConnectFourState} onMove={(column) => void playMove({ column })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
         : <Board state={snapshot.room.state as TicTacToeState} onMove={(cell) => void playMove({ cell })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
-    : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}${isTienGow ? ' waiting-mark-tiengow' : ''}`}>{isDownstairs ? '⇧' : isTienGow ? '天九' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isTienGow ? (snapshot.room.status === 'playing' ? (language === 'en' ? 'Table seated' : '座位已定') : (language === 'en' ? 'Tien Gow lobby' : '打天九大廳')) : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
+    : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}${isTienGow ? ' waiting-mark-tiengow' : ''}`}>{isDownstairs ? '⇧' : isTienGow ? '天九' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isTienGow ? (language === 'en' ? 'Tien Gow lobby' : '打天九大廳') : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
 
   const startLabel = !canStart
     ? text.waitingBoth

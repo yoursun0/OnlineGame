@@ -2,18 +2,27 @@ import { connectFour, nextCpuMove as nextConnectFourMove, type ConnectFourState 
 import { nextCpuMove, ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { logApiFailure } from './observability';
 import { getAdminClient } from './supabase-admin';
+import { applyTienGowCpuTurns, isTienGowState, pendingTienGowCpuSeat } from './tien-gow-room';
 
 export type CpuRoom = { id: string; status: string; version: number; state: unknown; game_slug?: string };
 export type CpuMember = { guest_id: string; seat: number; is_cpu?: boolean };
 
 function pendingCpuMove(room: CpuRoom, members: CpuMember[]) {
-  if (room.game_slug === 'downstairs' || room.game_slug === 'tien-gow') return null;
+  if (room.game_slug === 'downstairs') return null;
+  if (room.game_slug === 'tien-gow') {
+    if (!isTienGowState(room.state)) return null;
+    return pendingTienGowCpuSeat(room.state, members) ? { type: 'tien-gow' as const } : null;
+  }
   if (room.game_slug === 'connect-four') return nextConnectFourMove(room.state as ConnectFourState, members);
   return nextCpuMove(room.state as TicTacToeState, members);
 }
 
 export async function applyCpuTurnIfNeeded(room: CpuRoom, members: CpuMember[]) {
   if (room.status !== 'playing') return;
+  if (room.game_slug === 'tien-gow') {
+    await applyTienGowCpuTurns(room, members);
+    return;
+  }
   const cpu = members.find((member) => member.is_cpu);
   const move = pendingCpuMove(room, members);
   if (!cpu || !move) return;

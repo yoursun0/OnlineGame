@@ -100,22 +100,28 @@ test('a TGW table of four ready humans can start', () => {
   })).toBe(true);
 });
 
-test('a playing TGW room names the shuffled table, not a tic-tac-toe turn', () => {
-  const hand = createHand({ seed: 'tgw:TGW-4K8' });
+test('a playing TGW room names the seat to act, not a tic-tac-toe turn', () => {
+  const hand = createHand({ seed: 'tgw:TGW-4K8', table: { examples: false }, bankerSeat: 0 });
+  const members = [
+    { seat: 0, display_name: 'aa' },
+    { seat: 1, display_name: 'CPU' },
+    { seat: 2, display_name: 'CPU' },
+    { seat: 3, display_name: 'CPU' },
+  ];
   expect(roomHeadline({
     status: 'playing',
     state: hand,
-    members: [{ seat: 0, display_name: 'aa' }],
+    members,
     language: 'en',
     gameSlug: 'tien-gow',
-  })).toBe('Table seated — seats shuffled');
+  })).toBe('Turn: South · aa');
   expect(roomHeadline({
     status: 'playing',
     state: hand,
-    members: [{ seat: 0, display_name: 'aa' }],
+    members,
     language: 'zh-Hant',
     gameSlug: 'tien-gow',
-  })).toBe('牌局已開 — 座位已隨機分配');
+  })).toBe('輪到: 南 · aa');
 });
 
 test('traditional chinese names the 1–4 human start rule', () => {

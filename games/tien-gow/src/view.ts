@@ -27,6 +27,17 @@ export type View = {
   jieSeat: number | null;
 };
 
+export function isTienGowView(value: unknown): value is View {
+  if (!value || typeof value !== 'object') return false;
+  const view = value as Partial<View> & { hands?: unknown };
+  return Array.isArray(view.hand)
+    && typeof view.seat === 'number'
+    && Array.isArray(view.legal)
+    && typeof view.phase === 'string'
+    && typeof view.toAct === 'number'
+    && view.hands === undefined;
+}
+
 export function projectView(state: State, seat: number): View {
   return {
     seat,
