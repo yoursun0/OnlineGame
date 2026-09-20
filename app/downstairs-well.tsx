@@ -33,6 +33,7 @@ import {
 } from '@playroom/downstairs';
 import type { WellIntentDirection } from '@playroom/game-core';
 import { getBrowserSupabase } from './lib/supabase-browser';
+import { WellLifeBlock } from './well-life-block';
 
 type Props = {
   roomState: DownstairsRoomState;
@@ -579,10 +580,24 @@ export function DownstairsWell({
   return (
     <div className="well-play">
       <div className="well-hud">
-        <span>{zh ? '生命' : 'Life'} {life}</span>
-        <span>{zh ? '樓層' : 'Floors'} {depth}</span>
-        {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
-        {over && <span className="well-over">{resultLabel}</span>}
+        {over ? (
+          <>
+            <span>{zh ? '生命' : 'Life'} {life}</span>
+            <span>{zh ? '樓層' : 'Floors'} {depth}</span>
+            {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
+            <span className="well-over">{resultLabel}</span>
+          </>
+        ) : (
+          <>
+            <WellLifeBlock
+              label={zh ? '生命' : 'Life'}
+              life={life}
+              floor={depth}
+              language={language}
+            />
+            {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
+          </>
+        )}
       </div>
       {over && canReplay && onReplay && (
         <div className="well-controls">
