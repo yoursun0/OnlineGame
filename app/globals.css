@@ -264,6 +264,56 @@ h1, h2, h3, p { margin-top: 0; }
 
 .well-play { display: grid; gap: 12px; justify-items: center; width: min(100%, 420px); }
 .well-canvas { width: min(100%, 360px); height: auto; border-radius: 18px; border: 1px solid var(--line); box-shadow: var(--shadow); background: #0c3a78; image-rendering: pixelated; }
-.well-hud { display: flex; gap: 16px; font-family: var(--display); letter-spacing: .04em; }
+.well-hud { display: flex; align-items: center; gap: 16px; font-family: var(--display); letter-spacing: .04em; }
+.well-hud-over {
+  width: min(100%, 360px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.well-hud-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+.well-life { flex: 1 1 160px; min-width: 0; }
+.well-life-label, .well-floor-label, .well-hud-mode {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.well-life-label { margin-bottom: 6px; }
+.well-life-bar { display: flex; gap: 2px; height: 12px; }
+.well-life-pip {
+  flex: 1;
+  min-width: 0;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, .1);
+}
+.well-life-pip.is-on { background: var(--saffron); }
+.well-floor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 3.5em;
+}
+.well-floor-value { font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.well-hud-mode { align-self: center; }
 .well-over { color: var(--coral); }
+.well-hud-over .well-over {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 113, 91, .16);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
 .well-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }

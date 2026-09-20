@@ -32,6 +32,7 @@ import {
   type WellRenderAssets,
 } from '@playroom/downstairs';
 import type { WellIntentDirection } from '@playroom/game-core';
+import { FloorWidget, LifeBlock } from './downstairs-hud';
 import { getBrowserSupabase } from './lib/supabase-browser';
 
 type Props = {
@@ -578,11 +579,23 @@ export function DownstairsWell({
 
   return (
     <div className="well-play">
-      <div className="well-hud">
-        <span>{zh ? '生命' : 'Life'} {life}</span>
-        <span>{zh ? '樓層' : 'Floors'} {depth}</span>
-        {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
-        {over && <span className="well-over">{resultLabel}</span>}
+      <div className={over ? 'well-hud well-hud-over' : 'well-hud'}>
+        {over ? (
+          <>
+            <div className="well-hud-stats">
+              <LifeBlock label={zh ? '生命' : 'Life'} life={life} />
+              <FloorWidget label={zh ? '樓層' : 'Floors'} depth={depth} />
+              {shared && <span className="well-hud-mode">{zh ? '共用井' : 'Shared'}</span>}
+            </div>
+            <span className="well-over">{resultLabel}</span>
+          </>
+        ) : (
+          <>
+            <span>{zh ? '生命' : 'Life'} {life}</span>
+            <span>{zh ? '樓層' : 'Floors'} {depth}</span>
+            {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
+          </>
+        )}
       </div>
       {over && canReplay && onReplay && (
         <div className="well-controls">
