@@ -33,7 +33,7 @@ import {
 } from '@playroom/downstairs';
 import type { WellIntentDirection } from '@playroom/game-core';
 import { getBrowserSupabase } from './lib/supabase-browser';
-import { WellLifeBlock } from './well-life-block';
+import { WellHudBar, wellHudSeatsFromKids, type WellHudSeat } from './well-hud-bar';
 
 type Props = {
   roomState: DownstairsRoomState;
@@ -52,9 +52,25 @@ type Props = {
   onError: (message: string) => void;
 };
 
-function ownLife(engine: Engine, guestId: string) {
-  const kid = engine.players.find((player) => player.guestId === guestId) ?? engine.players[0];
-  return Math.max(0, Math.ceil(kid?.life ?? 0));
+type WellHudSnapshot = {
+  seats: WellHudSeat[];
+  depth: number;
+};
+
+function hudFromEngine(engine: Engine): WellHudSnapshot {
+  return {
+    seats: wellHudSeatsFromKids(engine.players),
+    depth: engine.depth,
+  };
+}
+
+function hudFromCheckpoint(checkpoint: DownstairsRoomState['checkpoint']): WellHudSnapshot {
+  if (!checkpoint) return { seats: [], depth: 0 };
+  const well = asRestorableWell(checkpoint);
+  return {
+    seats: wellHudSeatsFromKids(well.kids),
+    depth: well.depth ?? 0,
+  };
 }
 
 export function DownstairsWell({
@@ -84,8 +100,7 @@ export function DownstairsWell({
   const finishedRef = useRef(roomState.phase === 'finished');
   const shared = (roomState.checkpoint?.well.kids.length ?? 1) > 1;
   const refreshOutcome = guestWellRefreshOutcome(roomState.phase, roomState.checkpoint);
-  const [life, setLife] = useState(12);
-  const [depth, setDepth] = useState(0);
+  const [hud, setHud] = useState<WellHudSnapshot>(() => hudFromCheckpoint(roomState.checkpoint));
   const [over, setOver] = useState(roomState.phase === 'finished');
   const [out, setOut] = useState(refreshOutcome === 'out');
 
@@ -133,8 +148,7 @@ export function DownstairsWell({
     const self = engine.players.find((player) => player.guestId === guestId) ?? engine.players[0];
     finishedRef.current = roomState.phase === 'finished' || Boolean(self && !self.alive && engine.players.length === 1);
     setOver(finishedRef.current || engine.over);
-    setLife(ownLife(engine, guestId));
-    setDepth(engine.depth);
+    setHud(hudFromEngine(engine));
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
@@ -325,8 +339,7 @@ export function DownstairsWell({
           engine.step(STEP);
           acc -= STEP;
         }
-        setLife(ownLife(engine, guestId));
-        setDepth(engine.depth);
+        setHud(hudFromEngine(engine));
         broadcastSnapshot(engine, now);
         if (engine.over && !finishedRef.current) {
           const dead = engine.players.find((player) => !player.alive);
@@ -418,8 +431,7 @@ export function DownstairsWell({
         const predicted = engine.players.find((player) => player.guestId === guestId)?.x;
         applyHostSnapshot(engine, payload, guestId, predicted);
         ackRef.current = payload.ack;
-        setLife(ownLife(engine, guestId));
-        setDepth(engine.depth);
+        setHud(hudFromEngine(engine));
         if (engine.over) {
           finishedRef.current = true;
           setOver(true);
@@ -473,8 +485,7 @@ export function DownstairsWell({
       if (!finishedRef.current) {
         sendIntent(intentRef.current, now);
         applyOwnPrediction(engine, guestId, intentRef.current, dt);
-        setLife(ownLife(engine, guestId));
-        setDepth(engine.depth);
+        setHud(hudFromEngine(engine));
       }
       const ctx = canvas.getContext('2d');
       if (ctx) renderWell(ctx, engine, now / 1000, artRef.current);
@@ -580,28 +591,8 @@ export function DownstairsWell({
   return (
     <div className="well-play">
       <div className={over ? 'well-hud well-hud-over' : 'well-hud'}>
-        {over ? (
-          <>
-            <WellLifeBlock
-              label={zh ? '生命' : 'Life'}
-              life={life}
-              floor={depth}
-              language={language}
-            />
-            {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
-            <span className="well-over">{resultLabel}</span>
-          </>
-        ) : (
-          <>
-            <WellLifeBlock
-              label={zh ? '生命' : 'Life'}
-              life={life}
-              floor={depth}
-              language={language}
-            />
-            {shared && <span>{zh ? '共用井' : 'Shared'}</span>}
-          </>
-        )}
+        <WellHudBar seats={hud.seats} depth={hud.depth} language={language} />
+        {over && <span className="well-over">{resultLabel}</span>}
       </div>
       {over && canReplay && onReplay && (
         <div className="well-controls">
