@@ -12,7 +12,6 @@ import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-brows
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
 import { roomHeadline } from '../../room-headline';
-import { ROOM_POLL_WITHOUT_CLIENT_MS, ROOM_POLL_WITHOUT_REALTIME_MS, shouldPollRoom } from '../../room-sync';
 import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
 import { tienGowLobbySlots, tienGowSeatMark, tienGowSeatWind } from '../../tien-gow-seats';
@@ -108,39 +107,17 @@ export function RoomClient({ code }: { code: string }) {
   useEffect(() => {
     if (!snapshot) return;
     const supabase = getBrowserSupabase();
+    const interval = window.setInterval(() => { void refresh(); }, supabase ? 5000 : 1500);
     const reconcile = () => { if (document.visibilityState === 'visible') void refresh(); };
     window.addEventListener('online', reconcile);
     document.addEventListener('visibilitychange', reconcile);
-    let interval = 0;
-    let coalesceTimer = 0;
-    const stopPoll = () => { if (interval) window.clearInterval(interval); interval = 0; };
-    const startPoll = (periodMs: number) => {
-      if (interval) return;
-      interval = window.setInterval(() => { void refresh(); }, periodMs);
-    };
-    const scheduleRealtimeRefresh = () => {
-      if (coalesceTimer) return;
-      coalesceTimer = window.setTimeout(() => { coalesceTimer = 0; void refresh(); }, 50);
-    };
-    const cleanup = () => {
-      stopPoll();
-      if (coalesceTimer) window.clearTimeout(coalesceTimer);
-      window.removeEventListener('online', reconcile);
-      document.removeEventListener('visibilitychange', reconcile);
-    };
-    if (!supabase) {
-      startPoll(ROOM_POLL_WITHOUT_CLIENT_MS);
-      return cleanup;
-    }
+    if (!supabase) return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); };
     const channel = supabase.channel(`room:${snapshot.room.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${snapshot.room.id}` }, scheduleRealtimeRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${snapshot.room.id}` }, scheduleRealtimeRefresh)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${snapshot.room.id}` }, scheduleRealtimeRefresh)
-      .subscribe((status) => {
-        if (shouldPollRoom(true, status)) startPoll(ROOM_POLL_WITHOUT_REALTIME_MS);
-        else stopPoll();
-      });
-    return () => { cleanup(); void supabase.removeChannel(channel); };
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${snapshot.room.id}` }, () => { void refresh(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
+      .subscribe();
+    return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); void supabase.removeChannel(channel); };
   }, [snapshot?.room.id, refresh]);
 
   async function action(actionName: string, body: Record<string, unknown> = {}) {
