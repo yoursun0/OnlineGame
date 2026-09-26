@@ -32,7 +32,9 @@ These limits are enforced in route handlers and the `room_action_rate_limits` ta
 
 Additional bounds are an 8 KiB JSON body limit, a 1 KiB move body limit, 32-character display names, 280-character report reasons, 100 events returned per snapshot, and six-hour room expiry after activity. The API returns HTTP 429 for a rate-limit rejection and HTTP 413 for an oversized payload.
 
-Room expiry is lazy: reads and room commands call `expire_idle_rooms`, which uses `FOR UPDATE SKIP LOCKED` so concurrent requests can clean up without blocking each other. If traffic becomes low, expired rows remain until a request triggers cleanup; schedule a reviewed service-role cleanup job only if database growth justifies its cost.
+Room expiry is lazy. Join, ready, start, and replay call `expire_idle_rooms` inside their database functions. Room reads do not. The sweep uses `FOR UPDATE SKIP LOCKED` so concurrent commands can clean up without blocking each other. If traffic becomes low, expired rows remain until the next one of those commands; schedule a reviewed service-role cleanup job only if database growth justifies its cost.
+
+An open room follows Realtime changes on that room. It does not poll while the channel is subscribed. If the channel reports an error, timeout, or close, the client falls back to a 15-second snapshot poll. Returning to the tab or coming back online still refreshes once.
 
 ## Provider quota and cost controls
 
