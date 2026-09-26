@@ -11,6 +11,7 @@ import { isTienGowView, type Move as TienGowMove, type View as TienGowView } fro
 import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-browser';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
+import { canAutoRetryRoomCommand, ROOM_HEARTBEAT_MS, roomPollPeriodMs, shouldSyncRoom } from '../../room-sync';
 import { roomHeadline } from '../../room-headline';
 import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
@@ -106,26 +107,89 @@ export function RoomClient({ code }: { code: string }) {
 
   useEffect(() => {
     if (!snapshot) return;
+    const roomId = snapshot.room.id;
+    const roomStatus = snapshot.room.status;
     const supabase = getBrowserSupabase();
-    const interval = window.setInterval(() => { void refresh(); }, supabase ? 5000 : 1500);
-    const reconcile = () => { if (document.visibilityState === 'visible') void refresh(); };
-    window.addEventListener('online', reconcile);
-    document.addEventListener('visibilitychange', reconcile);
-    if (!supabase) return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); };
-    const channel = supabase.channel(`room:${snapshot.room.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .subscribe();
-    return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); void supabase.removeChannel(channel); };
-  }, [snapshot?.room.id, refresh]);
+    let interval = 0;
+    let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
+    const stopPoll = () => { if (interval) window.clearInterval(interval); interval = 0; };
+    const dropChannel = () => {
+      if (channel && supabase) void supabase.removeChannel(channel);
+      channel = null;
+    };
+    const startPoll = () => {
+      if (interval || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
+      interval = window.setInterval(() => {
+        if (shouldSyncRoom(document.visibilityState, roomStatus)) void refresh();
+      }, roomPollPeriodMs(Boolean(supabase)));
+    };
+    const startChannel = () => {
+      if (!supabase || channel || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
+      channel = supabase.channel(`room:${roomId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, () => { void refresh(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${roomId}` }, () => { void refresh(); })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${roomId}` }, () => { void refresh(); })
+        .subscribe();
+    };
+    const pause = () => { stopPoll(); dropChannel(); };
+    const onVisibility = () => {
+      if (!shouldSyncRoom(document.visibilityState, roomStatus)) {
+        pause();
+        return;
+      }
+      void refresh();
+      startPoll();
+      startChannel();
+    };
+    const onOnline = () => { if (shouldSyncRoom(document.visibilityState, roomStatus)) void refresh(); };
+    window.addEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisibility);
+    if (shouldSyncRoom(document.visibilityState, roomStatus)) {
+      startPoll();
+      startChannel();
+    }
+    return () => { pause(); window.removeEventListener('online', onOnline); document.removeEventListener('visibilitychange', onVisibility); };
+  }, [snapshot?.room.id, snapshot?.room.status, refresh]);
+
+  useEffect(() => {
+    if (!snapshot || !token || snapshot.room.status === 'expired') return;
+    const roomStatus = snapshot.room.status;
+    let stopped = false;
+    const beat = () => {
+      if (stopped || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
+      void fetch(`/api/rooms/${code}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'heartbeat' }),
+      }).then(async (response) => {
+        if (!response.ok) return;
+        const payload = await response.json() as Snapshot;
+        if (payload.room?.status === 'expired') {
+          lastVersionRef.current = payload.room.version;
+          hasSnapshotRef.current = true;
+          setSnapshot(payload);
+        }
+      }).catch(() => { /* a missed heartbeat just lets the room go idle */ });
+    };
+    const interval = window.setInterval(beat, ROOM_HEARTBEAT_MS);
+    const onVisibility = () => { if (shouldSyncRoom(document.visibilityState, roomStatus)) beat(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stopped = true; window.clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
+  }, [snapshot?.room.id, snapshot?.room.status, token, code]);
 
   async function action(actionName: string, body: Record<string, unknown> = {}) {
     setBusy(true); setError('');
     try {
       const response = await fetch(`/api/rooms/${code}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ action: actionName, ...body }) });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? 'Room action failed.');
+      if (!response.ok) {
+        const message = payload.error ?? 'Room action failed.';
+        if (!canAutoRetryRoomCommand(response.status)) {
+          setError(translateError(message, language));
+          return;
+        }
+        throw new Error(message);
+      }
       if (payload.left) { window.location.assign('/'); return; }
       lastVersionRef.current = (payload as Snapshot).room.version;
       setSnapshot(payload as Snapshot);
@@ -139,7 +203,14 @@ export function RoomClient({ code }: { code: string }) {
     try {
       const response = await fetch(`/api/rooms/${code}/move`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? 'Move rejected.');
+      if (!response.ok) {
+        const message = payload.error ?? 'Move rejected.';
+        if (!canAutoRetryRoomCommand(response.status)) {
+          setError(translateError(message, language));
+          return;
+        }
+        throw new Error(message);
+      }
       lastVersionRef.current = (payload as Snapshot).room.version;
       setSnapshot(payload as Snapshot);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Move rejected.', language)); }

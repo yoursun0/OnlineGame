@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { connectFour } from '@playroom/connect-four';
 import {
@@ -9,6 +10,7 @@ import {
 } from '@playroom/downstairs';
 import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
+import { BUSY_ERROR, START_REMATCH_COOLDOWN_SECONDS, START_REMATCH_LIMIT, START_REMATCH_WINDOW_SECONDS } from '../../../soft-gates';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
 import { isTienGowState, projectTienGowSnapshot } from '../../_lib/tien-gow-room';
@@ -17,6 +19,18 @@ import { downstairsReplayGuestIds } from '../../../room-replay';
 import { dealPlayroomHand, lobbyStateWithTable, parsePlayroomTable, tableFromLobbyState } from '../../../tien-gow-table';
 
 type Params = { params: Promise<{ code: string }> };
+
+async function enforceStartRematchGate(admin: SupabaseClient, code: string, guestId: string) {
+  const { data, error } = await admin.rpc('consume_start_rematch_gate', {
+    p_code: code,
+    p_guest_id: guestId,
+    p_limit: START_REMATCH_LIMIT,
+    p_window_seconds: START_REMATCH_WINDOW_SECONDS,
+    p_cooldown_seconds: START_REMATCH_COOLDOWN_SECONDS,
+  });
+  if (error) throw error;
+  if (!data) throw new ApiError(BUSY_ERROR, 429);
+}
 
 async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) {
   const admin = getAdminClient();
@@ -40,8 +54,6 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const { error: expiryError } = await admin.rpc('expire_idle_rooms', { p_now: new Date().toISOString() });
-    if (expiryError) throw expiryError;
     const sinceRaw = new URL(request.url).searchParams.get('since');
     const sinceVersion = sinceRaw === null ? 0 : Number(sinceRaw);
     if (!Number.isInteger(sinceVersion) || sinceVersion < 0 || sinceVersion > 1000000) throw new ApiError('Invalid event version.', 400);
@@ -96,6 +108,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       logRoomLifecycle('table', { roomCode: normalizedCode, guestId: guest.id, status: 'open' });
     } else if (body.action === 'start') {
+      await enforceStartRematchGate(admin, normalizedCode, guest.id);
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       const started = await getRoomSnapshot(normalizedCode, guest.id);
@@ -181,7 +194,6 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       logRoomLifecycle('report', { roomCode: normalizedCode, guestId: guest.id });
     } else if (body.action === 'replay') {
-      await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
       const current = await getRoomSnapshot(normalizedCode, guest.id);
       if (current.room.game_slug === 'tien-gow') {
         throw new ApiError('Wait until 結 before dealing the next hand.', 400);
@@ -200,6 +212,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       } else {
         initialState = ticTacToe.createInitialState();
       }
+      await enforceStartRematchGate(admin, normalizedCode, guest.id);
       const { error } = await admin.rpc('replay_room_for_guest', {
         p_code: normalizedCode,
         p_guest_id: guest.id,
@@ -207,8 +220,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       });
       if (error) throw error;
       logRoomLifecycle('replay', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
+    } else if (body.action === 'heartbeat') {
+      const { data, error } = await admin.rpc('touch_room_if_active', { p_code: normalizedCode, p_guest_id: guest.id });
+      if (error) throw error;
+      if (data === 'expired') {
+        return Response.json(projectTienGowSnapshot(await getRoomSnapshot(normalizedCode, guest.id), guest.id));
+      }
+      return Response.json({ touched: data });
     } else if (body.action === 'rematch' || body.action === 'next') {
-      await enforceRateLimit(admin, guest.id, 'replay-room', getClientIpHash(request), 5, 60);
       const current = await getRoomSnapshot(normalizedCode, guest.id);
       if (current.room.game_slug !== 'tien-gow') throw new ApiError('Wait until 結 before dealing the next hand.', 400);
       if (current.room.status !== 'playing' || !isTienGowState(current.room.state) || current.room.state.phase !== 'recap') {
@@ -221,6 +240,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         code: normalizedCode,
         current: current.room.state,
       });
+      await enforceStartRematchGate(admin, normalizedCode, guest.id);
       const { error } = await admin.rpc('append_game_event', {
         p_room_id: current.room.id,
         p_guest_id: guest.id,

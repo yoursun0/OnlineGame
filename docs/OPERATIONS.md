@@ -25,14 +25,22 @@ These limits are enforced in route handlers and the `room_action_rate_limits` ta
 
 | Action | Limit | Window |
 | --- | ---: | ---: |
-| Create room | 5 | 60 seconds per guest + hashed IP |
-| Join room | 10 | 60 seconds per guest + hashed IP |
-| Move | 12 | 10 seconds per guest + hashed IP |
-| Report room | 3 | 1 hour per guest + hashed IP |
+| Create room | 5 per IP hash and 5 per guest | 1 hour, with 20 seconds between creates |
+| Open rooms, site-wide | 40 non-expired (`open`, `playing`, `finished`) | Checked before insert |
+| Start, replay, rematch, next hand | 10 per human member of that room | 1 hour, with 5 seconds between deals |
+| Join room | 10 per guest + hashed IP | 60 seconds |
+| Move | 12 per guest + hashed IP | 10 seconds |
+| Report room | 3 per guest + hashed IP | 1 hour |
 
-Additional bounds are an 8 KiB JSON body limit, a 1 KiB move body limit, 32-character display names, 280-character report reasons, 100 events returned per snapshot, and six-hour room expiry after activity. The API returns HTTP 429 for a rate-limit rejection and HTTP 413 for an oversized payload.
+The create quota is enforced for the hashed IP and the guest id separately, so rotating anonymous sessions from one address does not reset it. Start and rematch use the human member, not the seat number, because 打天九 shuffles seats at start. Over-limit responses are HTTP 429 with `The server is busy. Please try again later.` The lobby and room show that as「伺服器忙，請稍後再試。」and do not retry the command on their own.
 
-Room expiry is lazy: reads and room commands call `expire_idle_rooms`, which uses `FOR UPDATE SKIP LOCKED` so concurrent requests can clean up without blocking each other. If traffic becomes low, expired rows remain until a request triggers cleanup; schedule a reviewed service-role cleanup job only if database growth justifies its cost.
+Additional bounds are an 8 KiB JSON body limit, a 1 KiB move body limit, 32-character display names, 280-character report reasons, and 100 events returned per snapshot. The API returns HTTP 413 for an oversized payload.
+
+Idle rooms expire 15 minutes after the last join, ready change, move, start, replay, or visible-tab heartbeat. `expire_idle_rooms` runs inside those commands and inside the site-wide cap check, using `FOR UPDATE SKIP LOCKED`. A room snapshot does not sweep and does not write. The heartbeat marks that one room expired when it is already idle. Expired rows drop out of the cap of 40. If traffic is low, other idle rows wait for the next create or room command.
+
+A visible room tab polls the snapshot every 5 seconds and subscribes to that room's Realtime changes. Hiding the tab stops the poll, unsubscribes that channel, and stops the heartbeat. An in-flight snapshot is allowed to finish. Coming back runs one refresh and resumes. A downstairs well that is already in progress keeps its presence channel so hiding the tab is not treated as leaving the well.
+
+The route hashes the client address from `x-forwarded-for` (the value Vercel sets), then `x-real-ip`, then `cf-connecting-ip`. The hash is salted with `RATE_LIMIT_SALT`. Prefer `cf-connecting-ip` only after Cloudflare proxies the hostname; until then a client-supplied Cloudflare header must not override Vercel.
 
 ## Provider quota and cost controls
 

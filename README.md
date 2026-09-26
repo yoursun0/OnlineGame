@@ -157,15 +157,19 @@ Application-level controls currently enforced:
 
 | Resource/action | Limit | Why it matters |
 | --- | ---: | --- |
-| Room create | 5 per guest + IP hash per 60 seconds | Prevent room-flooding |
+| Room create | 5 per hour per IP hash and per guest, 20 seconds apart | Prevent room-flooding without a login |
+| Open rooms | 40 non-expired rooms site-wide | Keep the free database and Realtime plan inside casual use |
+| Start / rematch | 10 per hour per human in that room, 5 seconds apart | Bound deal and start writes |
 | Room join | 10 per guest + IP hash per 60 seconds | Prevent code probing |
 | Move | 12 per guest + IP hash per 10 seconds | Bound API/database writes |
 | Room report | 3 per guest + IP hash per hour | Prevent report spam |
 | JSON request body | 8 KiB; move body 1 KiB | Bound Vercel/Supabase work per request |
 | Display name | 32 characters | Bound stored and rendered input |
 | Report reason | 1–280 characters | Bound abuse-report storage |
-| Room lifetime | 6 hours after activity; expired lazily on API calls | Bound retained room/event data |
+| Room idle | 15 minutes without join, move, or a visible-tab heartbeat | Drop abandoned rooms from the cap and from Realtime |
 | Snapshot event read | 100 events per request | Bound response size |
+
+Over-limit creates, joins, starts, and rematches return HTTP 429 and the message `The server is busy. Please try again later.` Traditional Chinese UI copy is「伺服器忙，請稍後再試。」The client shows that message and waits for the player to submit again. A hidden browser tab pauses room polling and unsubscribes the room Realtime channel. Knobs live in `app/soft-gates.ts` and `supabase/migrations/20260927000100_free_tier_soft_gates.sql`. The client address is the first `x-forwarded-for` hop Vercel sends, hashed with `RATE_LIMIT_SALT`. Cloudflare proxy rules are a later operations step and are not configured in this repository. Details are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 Provider quotas change over time. As a planning baseline for the current free tiers, verify the provider dashboards and official docs before launch:
 

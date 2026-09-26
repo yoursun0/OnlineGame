@@ -19,6 +19,7 @@ Current order:
 13. `20260920000100_downstairs_room_replay.sql` — LAD same-room rematch without requiring a full room.
 14. `20260920000200_tien_gow_rooms.sql` — allow 打天九 rooms with `TGW-` codes (lobby, max 4, no deal yet).
 15. `20260920000300_tien_gow_lobby_cpu_seats.sql` — TGW start: 1–4 humans, CPU fill, random seats 0–3 (南/東/北/西).
+16. `20260927000100_free_tier_soft_gates.sql` — site-wide cap of 40, create and start/rematch quotas, 15-minute idle expiry.
 
 Apply and verify against an explicit target:
 

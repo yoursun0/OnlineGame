@@ -40,6 +40,7 @@ export function roomHeadline(input: {
   gameSlug?: string;
 }) {
   const zh = input.language === 'zh-Hant';
+  if (input.status === 'expired') return zh ? '房間已閒置關閉' : 'This room has expired';
   if (input.gameSlug === 'downstairs') {
     const state = input.state as {
       phase?: string;
