@@ -40,8 +40,6 @@ export async function GET(request: NextRequest, { params }: Params) {
     if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const { error: expiryError } = await admin.rpc('expire_idle_rooms', { p_now: new Date().toISOString() });
-    if (expiryError) throw expiryError;
     const sinceRaw = new URL(request.url).searchParams.get('since');
     const sinceVersion = sinceRaw === null ? 0 : Number(sinceRaw);
     if (!Number.isInteger(sinceVersion) || sinceVersion < 0 || sinceVersion > 1000000) throw new ApiError('Invalid event version.', 400);
