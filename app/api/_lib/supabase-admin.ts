@@ -36,12 +36,14 @@ export function publicErrorMessage(error: unknown, fallback = 'Request failed.')
 
 export function errorResponse(error: unknown, fallback = 'Request failed.') {
   const message = publicErrorMessage(error, fallback);
+  const databaseBusy = message.includes('schema cache') || message.includes('connection pool');
   const status = error instanceof ApiError
     ? error.status
-    : message.includes(BUSY_ERROR) ? 429
+    : databaseBusy ? 503
+      : message.includes(BUSY_ERROR) ? 429
       : message.includes('required') || message.includes('invalid') || message.includes('expired') ? 401
       : message.includes('not configured') ? 503 : 409;
-  return Response.json({ error: message }, { status });
+  return Response.json({ error: databaseBusy ? BUSY_ERROR : message }, { status });
 }
 
 export async function readJson(request: NextRequest, maxBytes = 8 * 1024) {

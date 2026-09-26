@@ -11,7 +11,7 @@ import { isTienGowView, type Move as TienGowMove, type View as TienGowView } fro
 import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-browser';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
-import { canAutoRetryRoomCommand, ROOM_HEARTBEAT_MS, roomPollPeriodMs, shouldSyncRoom } from '../../room-sync';
+import { canAutoRetryRoomCommand, ROOM_HEARTBEAT_MS, roomPollPeriodMs, shouldPauseRoomPoll, shouldSyncRoom } from '../../room-sync';
 import { roomHeadline } from '../../room-headline';
 import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
@@ -92,15 +92,21 @@ export function RoomClient({ code }: { code: string }) {
         : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
+  const databaseBusyRef = useRef(false);
   const refresh = useCallback(async () => {
     try {
       const result = await fetchSnapshot(code, lastVersionRef.current);
+      databaseBusyRef.current = false;
       const alreadyHadSnapshot = hasSnapshotRef.current;
       lastVersionRef.current = result.snapshot.room.version;
       hasSnapshotRef.current = true;
       setSnapshot(result.snapshot); setGuestId(result.guestId); setToken(result.token);
       setError((current) => errorAfterSuccessfulRefresh(current, alreadyHadSnapshot));
-    } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Could not load room.', language)); }
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Could not load room.';
+      if (shouldPauseRoomPoll(message)) databaseBusyRef.current = true;
+      setError(translateError(message, language));
+    }
   }, [code, language]);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -120,6 +126,7 @@ export function RoomClient({ code }: { code: string }) {
     const startPoll = () => {
       if (interval || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
       interval = window.setInterval(() => {
+        if (databaseBusyRef.current) return;
         if (shouldSyncRoom(document.visibilityState, roomStatus)) void refresh();
       }, roomPollPeriodMs(Boolean(supabase)));
     };
@@ -137,6 +144,7 @@ export function RoomClient({ code }: { code: string }) {
         pause();
         return;
       }
+      databaseBusyRef.current = false;
       void refresh();
       startPoll();
       startChannel();
@@ -156,7 +164,7 @@ export function RoomClient({ code }: { code: string }) {
     const roomStatus = snapshot.room.status;
     let stopped = false;
     const beat = () => {
-      if (stopped || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
+      if (stopped || databaseBusyRef.current || !shouldSyncRoom(document.visibilityState, roomStatus)) return;
       void fetch(`/api/rooms/${code}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
@@ -172,7 +180,11 @@ export function RoomClient({ code }: { code: string }) {
       }).catch(() => { /* a missed heartbeat just lets the room go idle */ });
     };
     const interval = window.setInterval(beat, ROOM_HEARTBEAT_MS);
-    const onVisibility = () => { if (shouldSyncRoom(document.visibilityState, roomStatus)) beat(); };
+    const onVisibility = () => {
+      if (!shouldSyncRoom(document.visibilityState, roomStatus)) return;
+      databaseBusyRef.current = false;
+      beat();
+    };
     document.addEventListener('visibilitychange', onVisibility);
     return () => { stopped = true; window.clearInterval(interval); document.removeEventListener('visibilitychange', onVisibility); };
   }, [snapshot?.room.id, snapshot?.room.status, token, code]);

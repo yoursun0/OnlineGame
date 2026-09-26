@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { errorResponse } from '../app/api/_lib/supabase-admin';
 import { translateError } from '../app/language';
 import { roomHeadline } from '../app/room-headline';
-import { canAutoRetryRoomCommand, roomPollPeriodMs, shouldSyncRoom } from '../app/room-sync';
+import { canAutoRetryRoomCommand, roomPollPeriodMs, shouldPauseRoomPoll, shouldSyncRoom } from '../app/room-sync';
 import { BUSY_ERROR, CREATE_ROOM_COOLDOWN_SECONDS, CREATE_ROOM_LIMIT, IDLE_ROOM_TTL_MINUTES, ROOM_CAP, START_REMATCH_COOLDOWN_SECONDS, START_REMATCH_LIMIT } from '../app/soft-gates';
 
 test('a hidden or expired room does not keep polling or a room subscription', () => {
@@ -17,7 +17,17 @@ test('a hidden or expired room does not keep polling or a room subscription', ()
 
 test('an over-limit command is not retried by the client', () => {
   expect(canAutoRetryRoomCommand(429)).toBe(false);
+  expect(canAutoRetryRoomCommand(503)).toBe(false);
   expect(canAutoRetryRoomCommand(409)).toBe(true);
+});
+
+test('a PostgREST schema-cache failure is the busy message and pauses polling', async () => {
+  const response = errorResponse({ code: 'PGRST002', message: 'Could not query the database for the schema cache. Retrying.' });
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: BUSY_ERROR });
+  expect(shouldPauseRoomPoll(BUSY_ERROR)).toBe(true);
+  expect(shouldPauseRoomPoll('Could not query the database for the schema cache. Retrying.')).toBe(true);
+  expect(shouldPauseRoomPoll('Room not found or expired.')).toBe(false);
 });
 
 test('the busy rejection is HTTP 429 in both languages', async () => {

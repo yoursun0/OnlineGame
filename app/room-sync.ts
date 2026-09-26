@@ -20,7 +20,14 @@ export function roomPollPeriodMs(hasBrowserClient: boolean): number {
   return hasBrowserClient ? ROOM_POLL_WITH_CLIENT_MS : ROOM_POLL_WITHOUT_CLIENT_MS;
 }
 
-/** Over-limit responses stay on screen. The player retries by submitting again. */
+/** Over-limit and database-busy responses stay on screen. The player retries by submitting again. */
 export function canAutoRetryRoomCommand(status: number): boolean {
-  return status !== 429;
+  return status !== 429 && status !== 503;
+}
+
+/** A schema-cache or pool failure must not keep the 5-second room poll running. */
+export function shouldPauseRoomPoll(message: string): boolean {
+  return message.includes('schema cache')
+    || message.includes('connection pool')
+    || message === 'The server is busy. Please try again later.';
 }
