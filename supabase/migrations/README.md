@@ -19,6 +19,9 @@ Current order:
 13. `20260920000100_downstairs_room_replay.sql` — LAD same-room rematch without requiring a full room.
 14. `20260920000200_tien_gow_rooms.sql` — allow 打天九 rooms with `TGW-` codes (lobby, max 4, no deal yet).
 15. `20260920000300_tien_gow_lobby_cpu_seats.sql` — TGW start: 1–4 humans, CPU fill, random seats 0–3 (南/東/北/西).
+16. `20260927000100_free_tier_soft_gates.sql` — issue #58 soft gates. Superseded by migration 18; do not edit.
+17. `20260927000200_append_game_events.sql` — one-transaction computer reply. Superseded by migration 18; do not edit.
+18. `20260927000300_revert_soft_gate_functions.sql` — restore the 6-hour idle sweep and room create, and drop the unused soft-gate helpers.
 
 Apply and verify against an explicit target:
 
