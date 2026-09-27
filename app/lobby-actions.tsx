@@ -1,21 +1,24 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { ensureGuestSession } from './lib/supabase-browser';
+import { browserGuestAuth } from './lib/supabase-browser';
+import { readGuestRequestResult, requestWithGuestRetry } from './lib/guest-room-fetch';
 import { translateError, useLanguage } from './language';
 import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from './room-code';
 
 async function callRoomApi(path: string, body: unknown) {
-  const guest = await ensureGuestSession();
-  if (!guest) throw new Error('Connect Supabase before creating or joining a room.');
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${guest.session.access_token}` },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error ?? 'Room request failed.');
-  return payload as { code: string };
+  const result = await requestWithGuestRetry(
+    async (accessToken) => {
+      const response = await fetch(path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(body),
+      });
+      return readGuestRequestResult(response);
+    },
+    browserGuestAuth,
+  );
+  return result.data as { code: string };
 }
 
 function modeForSlug(gameSlug: string) {

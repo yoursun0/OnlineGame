@@ -8,7 +8,8 @@ import type { ConnectFourState } from '@playroom/connect-four';
 import { isDownstairsRoomState, type DownstairsRoomState } from '@playroom/downstairs';
 import type { TicTacToeState } from '@playroom/tic-tac-toe';
 import { isTienGowView, type Move as TienGowMove, type View as TienGowView } from '@playroom/tien-gow';
-import { ensureGuestSession, getBrowserSupabase } from '../../lib/supabase-browser';
+import { browserGuestAuth, getBrowserSupabase } from '../../lib/supabase-browser';
+import { readGuestRequestResult, requestWithGuestRetry } from '../../lib/guest-room-fetch';
 import { LanguageToggle, translateError, useLanguage } from '../../language';
 import { errorAfterSuccessfulRefresh } from '../../room-error-state';
 import { roomHeadline } from '../../room-headline';
@@ -24,13 +25,16 @@ type Member = { guest_id: string; display_name: string; seat: number; is_ready: 
 type Snapshot = { room: Room; members: Member[]; events: Array<{ version: number; event_type: string }> };
 
 async function fetchSnapshot(code: string, sinceVersion = 0) {
-  const guest = await ensureGuestSession();
-  if (!guest) throw new Error('Connect Supabase before entering a room.');
   const suffix = sinceVersion > 0 ? `?since=${sinceVersion}` : '';
-  const response = await fetch(`/api/rooms/${code}${suffix}`, { headers: { authorization: `Bearer ${guest.session.access_token}` }, cache: 'no-store' });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error ?? 'Could not load room.');
-  return { snapshot: payload as Snapshot, guestId: guest.guestId, token: guest.session.access_token };
+  const result = await requestWithGuestRetry(
+    async (accessToken) => {
+      const response = await fetch(`/api/rooms/${code}${suffix}`, { headers: { authorization: `Bearer ${accessToken}` }, cache: 'no-store' });
+      return readGuestRequestResult(response);
+    },
+    browserGuestAuth,
+    { connectError: 'Connect Supabase before entering a room.', failureFallback: 'Could not load room.' },
+  );
+  return { snapshot: result.data as Snapshot, guestId: result.guestId, token: result.accessToken };
 }
 
 function isOwnTurn(room: Room, seat: number) {
@@ -123,12 +127,23 @@ export function RoomClient({ code }: { code: string }) {
   async function action(actionName: string, body: Record<string, unknown> = {}) {
     setBusy(true); setError('');
     try {
-      const response = await fetch(`/api/rooms/${code}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ action: actionName, ...body }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? 'Room action failed.');
+      const result = await requestWithGuestRetry(
+        async (accessToken) => {
+          const response = await fetch(`/api/rooms/${code}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` }, body: JSON.stringify({ action: actionName, ...body }) });
+          return readGuestRequestResult(response);
+        },
+        {
+          ensure: async () => (token ? { accessToken: token, guestId } : browserGuestAuth.ensure()),
+          recover: browserGuestAuth.recover,
+        },
+        { connectError: 'Connect Supabase before entering a room.', failureFallback: 'Room action failed.' },
+      );
+      setToken(result.accessToken);
+      setGuestId(result.guestId);
+      const payload = result.data as Snapshot & { left?: boolean };
       if (payload.left) { window.location.assign('/'); return; }
-      lastVersionRef.current = (payload as Snapshot).room.version;
-      setSnapshot(payload as Snapshot);
+      lastVersionRef.current = payload.room.version;
+      setSnapshot(payload);
       if (actionName === 'report') { setReportSubmitted(true); setReportReason(''); }
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Room action failed.', language)); }
     finally { setBusy(false); }
@@ -137,11 +152,22 @@ export function RoomClient({ code }: { code: string }) {
   async function playMove(body: { cell?: number; column?: number } | TienGowMove) {
     setBusy(true); setError('');
     try {
-      const response = await fetch(`/api/rooms/${code}/move`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? 'Move rejected.');
-      lastVersionRef.current = (payload as Snapshot).room.version;
-      setSnapshot(payload as Snapshot);
+      const result = await requestWithGuestRetry(
+        async (accessToken) => {
+          const response = await fetch(`/api/rooms/${code}/move`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` }, body: JSON.stringify(body) });
+          return readGuestRequestResult(response);
+        },
+        {
+          ensure: async () => (token ? { accessToken: token, guestId } : browserGuestAuth.ensure()),
+          recover: browserGuestAuth.recover,
+        },
+        { connectError: 'Connect Supabase before entering a room.', failureFallback: 'Move rejected.' },
+      );
+      setToken(result.accessToken);
+      setGuestId(result.guestId);
+      const payload = result.data as Snapshot;
+      lastVersionRef.current = payload.room.version;
+      setSnapshot(payload);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Move rejected.', language)); }
     finally { setBusy(false); }
   }
