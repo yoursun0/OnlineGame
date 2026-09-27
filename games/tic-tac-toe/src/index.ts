@@ -47,7 +47,12 @@ export function chooseCpuMove(state: TicTacToeState): number {
   let bestScore = Number.NEGATIVE_INFINITY;
   for (let cell = 0; cell < 9; cell += 1) {
     if (state.board[cell]) continue;
-    const score = scoreCpuPosition(ticTacToe.applyMove(state, { cell }, { id: 'cpu' }), cpuMark);
+    const score = scoreCpuPosition(
+      ticTacToe.applyMove(state, { cell }, { id: 'cpu' }),
+      cpuMark,
+      Number.NEGATIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+    );
     if (score > bestScore) {
       bestScore = score;
       bestCell = cell;
@@ -57,7 +62,7 @@ export function chooseCpuMove(state: TicTacToeState): number {
   return bestCell;
 }
 
-function scoreCpuPosition(state: TicTacToeState, cpuMark: Mark): number {
+function scoreCpuPosition(state: TicTacToeState, cpuMark: Mark, alpha: number, beta: number): number {
   const status = ticTacToe.getStatus(state);
   if (status === 'draw') return 0;
   if (status === 'won') {
@@ -68,8 +73,15 @@ function scoreCpuPosition(state: TicTacToeState, cpuMark: Mark): number {
   let best = cpuToMove ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
   for (let cell = 0; cell < 9; cell += 1) {
     if (state.board[cell]) continue;
-    const score = scoreCpuPosition(ticTacToe.applyMove(state, { cell }, { id: 'cpu' }), cpuMark);
-    best = cpuToMove ? Math.max(best, score) : Math.min(best, score);
+    const score = scoreCpuPosition(ticTacToe.applyMove(state, { cell }, { id: 'cpu' }), cpuMark, alpha, beta);
+    if (cpuToMove) {
+      best = Math.max(best, score);
+      alpha = Math.max(alpha, best);
+    } else {
+      best = Math.min(best, score);
+      beta = Math.min(beta, best);
+    }
+    if (beta <= alpha) break;
   }
   return best;
 }

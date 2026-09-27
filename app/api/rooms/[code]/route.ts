@@ -37,13 +37,15 @@ async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) 
   const { data: room, error: roomError } = await admin.from('rooms').select('*').eq('code', code).maybeSingle();
   if (roomError) throw roomError;
   if (!room) throw new Error('Room not found or expired.');
-  const { data: members, error: membersError } = await admin.from('room_members').select('*').eq('room_id', room.id).order('seat');
-  if (membersError) throw membersError;
-  if (!members?.some((member) => member.guest_id === guestId)) throw new Error('Join this room before reading its state.');
   let eventsQuery = admin.from('game_events').select('*').eq('room_id', room.id).order('version', { ascending: true }).limit(100);
   if (sinceVersion > 0) eventsQuery = eventsQuery.gt('version', sinceVersion);
-  const { data: events, error: eventsError } = await eventsQuery;
+  const [{ data: members, error: membersError }, { data: events, error: eventsError }] = await Promise.all([
+    admin.from('room_members').select('*').eq('room_id', room.id).order('seat'),
+    eventsQuery,
+  ]);
+  if (membersError) throw membersError;
   if (eventsError) throw eventsError;
+  if (!members?.some((member) => member.guest_id === guestId)) throw new Error('Join this room before reading its state.');
   return { room, members: members ?? [], events: events ?? [] };
 }
 
