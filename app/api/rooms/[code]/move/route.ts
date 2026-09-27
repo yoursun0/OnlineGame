@@ -6,7 +6,7 @@ import { ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { applyMove, validateMove, type State as TienGowState } from '@playroom/tien-gow';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../../_lib/observability';
-import { appendGameSteps, followUpSteps, type StoredStep } from '../../../_lib/apply-cpu-turn';
+import { snapshotAfterCpuTurn } from '../../../_lib/apply-cpu-turn';
 import { isTienGowState, parseTienGowMove, projectTienGowSnapshot, publicTienGowMovePayload } from '../../../_lib/tien-gow-room';
 import { getRoomSnapshot } from '../route';
 
@@ -20,8 +20,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await readJson(request, 1024) as { cell?: number; column?: number; expectedVersion?: number };
     if (isWellPlayPayload(body)) throw new ApiError('Realtime well traffic does not use the turn-based move path.', 400);
     await enforceRateLimit(admin, guest.id, 'move', getClientIpHash(request), 12, 10);
-    const snapshot = await getRoomSnapshot(code.toUpperCase(), guest.id);
-    const { room, members, events } = snapshot;
+    const { room, members } = await getRoomSnapshot(code.toUpperCase(), guest.id);
     if (room.game_slug === DOWNSTAIRS_SLUG) throw new ApiError('Realtime well traffic does not use the turn-based move path.', 400);
     const expectedVersion = body.expectedVersion ?? room.version;
     if (!Number.isInteger(expectedVersion) || expectedVersion < 0) throw new ApiError('Invalid room version.', 400);
@@ -68,32 +67,24 @@ export async function POST(request: NextRequest, { params }: Params) {
       payload = { cell: move.cell, mark: state.nextMark };
     }
 
-    const humanStep: StoredStep = {
-      guestId: guest.id,
-      state: nextState,
-      status: status === 'playing' ? 'playing' : 'finished',
-      eventType: 'move',
-      payload,
-    };
-    const steps = humanStep.status === 'playing'
-      ? [humanStep, ...followUpSteps(room.game_slug, nextState, members)]
-      : [humanStep];
-    const version = await appendGameSteps(admin, room.id, guest.id, expectedVersion, steps);
-    const last = steps[steps.length - 1];
-    logRoomLifecycle('move', { roomCode: code.toUpperCase(), guestId: guest.id, version, status: last.status });
-    return Response.json(projectTienGowSnapshot({
-      room: { ...room, state: last.state, version, status: last.status, last_activity_at: new Date().toISOString() },
-      members,
-      events: [
-        ...events,
-        ...steps.map((step, index) => ({
-          version: expectedVersion + index + 1,
-          event_type: step.eventType,
-          guest_id: step.guestId,
-          payload: step.payload,
-        })),
-      ],
-    }, guest.id));
+    const { error } = await admin.rpc('append_game_event', {
+      p_room_id: room.id,
+      p_guest_id: guest.id,
+      p_expected_version: expectedVersion,
+      p_state: nextState,
+      p_status: status === 'playing' ? 'playing' : 'finished',
+      p_event_type: 'move',
+      p_payload: payload,
+    });
+    if (error) throw error;
+    logRoomLifecycle('move', { roomCode: code.toUpperCase(), guestId: guest.id, version: expectedVersion + 1, status });
+    const drained = await snapshotAfterCpuTurn(
+      await getRoomSnapshot(code.toUpperCase(), guest.id),
+      () => getRoomSnapshot(code.toUpperCase(), guest.id),
+      undefined,
+      code.toUpperCase(),
+    );
+    return Response.json(projectTienGowSnapshot(drained, guest.id));
   } catch (error) {
     logApiFailure('/api/rooms/[code]/move', error);
     return errorResponse(error);

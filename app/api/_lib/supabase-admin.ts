@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { createHash } from 'node:crypto';
-import { BUSY_ERROR } from '../../soft-gates';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -36,14 +35,11 @@ export function publicErrorMessage(error: unknown, fallback = 'Request failed.')
 
 export function errorResponse(error: unknown, fallback = 'Request failed.') {
   const message = publicErrorMessage(error, fallback);
-  const databaseBusy = message.includes('schema cache') || message.includes('connection pool');
   const status = error instanceof ApiError
     ? error.status
-    : databaseBusy ? 503
-      : message.includes(BUSY_ERROR) ? 429
-      : message.includes('required') || message.includes('invalid') || message.includes('expired') ? 401
+    : message.includes('required') || message.includes('invalid') || message.includes('expired') ? 401
       : message.includes('not configured') ? 503 : 409;
-  return Response.json({ error: databaseBusy ? BUSY_ERROR : message }, { status });
+  return Response.json({ error: message }, { status });
 }
 
 export async function readJson(request: NextRequest, maxBytes = 8 * 1024) {
@@ -59,8 +55,6 @@ export async function readJson(request: NextRequest, maxBytes = 8 * 1024) {
 }
 
 export function getClientIpHash(request: NextRequest) {
-  // Vercel sets x-forwarded-for to the connecting client. cf-connecting-ip is
-  // only trustworthy once Cloudflare proxies the hostname (issue #58 phase 2).
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const ip = forwarded || request.headers.get('x-real-ip') || request.headers.get('cf-connecting-ip') || 'unknown';
   const salt = process.env.RATE_LIMIT_SALT || 'playroom-development-rate-limit';
@@ -83,5 +77,5 @@ export async function enforceRateLimit(
     p_window_seconds: windowSeconds,
   });
   if (error) throw error;
-  if (!data) throw new ApiError(BUSY_ERROR, 429);
+  if (!data) throw new ApiError('Too many requests. Please try again later.', 429);
 }

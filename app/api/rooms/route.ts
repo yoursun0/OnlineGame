@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
-import { ApiError, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../_lib/supabase-admin';
+import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../_lib/observability';
-import { BUSY_ERROR, CREATE_ROOM_COOLDOWN_SECONDS, CREATE_ROOM_LIMIT, CREATE_ROOM_WINDOW_SECONDS, ROOM_CAP } from '../../soft-gates';
 
 const AVAILABLE = {
   'tic-tac-toe': 'turn_based',
@@ -25,18 +24,7 @@ export async function POST(request: NextRequest) {
     }
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
     if (displayName.length > 32) throw new ApiError('Display name must be 32 characters or fewer.', 400);
-    const gate = await admin.rpc('consume_create_room_gate', {
-      p_guest_id: guest.id,
-      p_ip_hash: getClientIpHash(request),
-      p_limit: CREATE_ROOM_LIMIT,
-      p_window_seconds: CREATE_ROOM_WINDOW_SECONDS,
-      p_cooldown_seconds: CREATE_ROOM_COOLDOWN_SECONDS,
-    });
-    if (gate.error) throw gate.error;
-    if (!gate.data) throw new ApiError(BUSY_ERROR, 429);
-    const cap = await admin.rpc('playroom_room_cap_reached', { p_cap: ROOM_CAP });
-    if (cap.error) throw cap.error;
-    if (cap.data) throw new ApiError(BUSY_ERROR, 429);
+    await enforceRateLimit(admin, guest.id, 'create-room', getClientIpHash(request), 5, 60);
     const { data: roomId, error } = await admin.rpc('create_room_for_guest', {
       p_guest_id: guest.id,
       p_game_slug: body.gameSlug,

@@ -192,13 +192,13 @@ test('the move API validates actor seat and returns projectView after CPU drain'
   expect(moveRoute).toContain('applyMove');
   expect(moveRoute).toContain('parseTienGowMove');
   expect(moveRoute).toContain('projectTienGowSnapshot');
-  expect(moveRoute).toContain('followUpSteps');
+  expect(moveRoute).toContain('snapshotAfterCpuTurn');
 
   const roomRoute = await readFile(new URL('../app/api/rooms/[code]/route.ts', import.meta.url), 'utf8');
   expect(roomRoute).toContain('projectTienGowSnapshot');
 
   const cpu = await readFile(new URL('../app/api/_lib/apply-cpu-turn.ts', import.meta.url), 'utf8');
-  expect(cpu).toContain('pendingTienGowCpuSeat');
+  expect(cpu).toContain('applyTienGowCpuTurns');
   expect(cpu).not.toContain("room.game_slug === 'downstairs' || room.game_slug === 'tien-gow'");
 });
 

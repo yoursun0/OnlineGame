@@ -62,9 +62,6 @@ testWithTimeout('Issue #3 recovery, lifecycle, abuse controls, and anonymous rep
   const host = await createTestUser('host');
   const guest = await createTestUser('guest');
   const code = await createRoom(host.token, 'Host');
-  const cooled = await api('/api/rooms', host.token, { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: 'Again' });
-  expect(cooled.response.status).toBe(429);
-  expect(cooled.payload?.error).toBe('The server is busy. Please try again later.');
 
   expect((await api('/api/rooms', host.token, { gameSlug: 'tic-tac-toe', mode: 'realtime', displayName: 'Realtime' })).response.status).toBe(400);
 
@@ -99,21 +96,16 @@ testWithTimeout('Issue #3 recovery, lifecycle, abuse controls, and anonymous rep
   expect((await api(`/api/rooms/${code}`, guest.token, { action: 'report', reason: 'Automated UAT report' })).response.status).toBe(200);
   expect((await api(`/api/rooms/${code}`, guest.token, { action: 'leave' })).response.status).toBe(200);
 
-  const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const expiringCode = `TIK-${Array.from(crypto.getRandomValues(new Uint8Array(3)), (byte) => alphabet[byte % alphabet.length]).join('')}`;
-  const inserted = await admin.from('rooms').insert({
-    code: expiringCode,
-    game_slug: 'tic-tac-toe',
-    mode: 'turn_based',
-    host_guest_id: host.id,
-    state: { board: [null, null, null, null, null, null, null, null, null], nextMark: 'X', moveCount: 0 },
-    max_players: 2,
-    status: 'open',
-    expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    last_activity_at: new Date(Date.now() - 16 * 60 * 1000).toISOString(),
-  }).select('code').single();
-  if (inserted.error) throw inserted.error;
-  roomCodes.push(expiringCode);
+  const expiringCode = await createRoom(host.token, 'Expiring');
+  await admin.from('rooms').update({ expires_at: new Date(Date.now() - 1000).toISOString(), last_activity_at: new Date(Date.now() - 7 * 3600 * 1000).toISOString() }).eq('code', expiringCode);
   expect((await api(`/api/rooms/${expiringCode}`, guest.token, { action: 'join', displayName: 'Too late' })).response.status).toBe(409);
+
+  const rateLimitedCodes: string[] = [];
+  for (let index = 0; index < 6; index += 1) {
+    const result = await api('/api/rooms', host.token, { gameSlug: 'tic-tac-toe', mode: 'turn_based', displayName: `Rate ${index}` });
+    if (result.response.ok && result.payload?.code) rateLimitedCodes.push(result.payload.code);
+    if (index === 5) expect(result.response.status).toBe(429);
+  }
+  roomCodes.push(...rateLimitedCodes);
   expect((await api(`/api/rooms/${code}`, host.token)).payload?.room.version).toBe(2);
 }, 30000);

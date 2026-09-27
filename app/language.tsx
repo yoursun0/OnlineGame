@@ -78,7 +78,6 @@ const errorTranslations: Record<string, string> = {
   'Finish reason must be hp, fall, or quit.': '結束原因必須是生命、墜落或退出。',
   'Finish reason must be hp, fall, quit, or host_left.': '結束原因必須是生命、墜落、退出或房主離開。',
   'Could not end well after host left.': '房主離開後未能結束井況。',
-  'The server is busy. Please try again later.': '伺服器忙，請稍後再試。',
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
