@@ -14,10 +14,20 @@ import {
   isTienGowView,
   parseTienGowMove,
   pendingTienGowCpuSeat,
+  presentRoomCommandSnapshot,
   projectTienGowSnapshot,
   publicTienGowMovePayload,
   TGW_CPU_DRAIN_CAP,
 } from '../app/api/_lib/tien-gow-room';
+import {
+  roomRefreshIsStale,
+  tienGowCpuMoveMs,
+  tienGowCpuPlaybackFrames,
+  tienGowCpuPlaybackPlan,
+  tienGowCpuStepMs,
+  TGW_CPU_PLAY_MS,
+  TGW_CPU_SKIP_MS,
+} from '../app/tien-gow-cpu-playback';
 import { translateError } from '../app/language';
 import { roomHeadline } from '../app/room-headline';
 
@@ -205,6 +215,79 @@ test('the move API validates actor seat and returns projectView after CPU drain'
   expect(cpu).not.toContain("room.game_slug === 'downstairs' || room.game_slug === 'tien-gow'");
 });
 
+test('computer playback shows every CPU move, including the fourth tile, without hidden faces', () => {
+  let state = createHand({
+    seed: 'tgw-room-playback',
+    table: { ...DEFAULT_TABLE, examples: false },
+    bankerSeat: 0,
+  });
+  const lead = nextCpuMove(state, 0);
+  expect(lead).not.toBeNull();
+  state = applyMove(state, lead!, { id: 'human', seat: 0 });
+  const drained = drainTienGowCpuState(state, oneHumanThreeCpu);
+  expect(drained.applied.length).toBeGreaterThan(0);
+  const playback = tienGowCpuPlaybackFrames(state, drained.applied, drained.states, 0);
+  expect(playback.frames).toHaveLength(drained.applied.length);
+  expect(playback.opening.trick?.plays).toHaveLength(1);
+  const held = playback.frames.find((frame) => frame.view.trick?.plays.length === 4);
+  expect(held).toBeTruthy();
+  expect(held?.ms).toBe(TGW_CPU_PLAY_MS);
+  for (const frame of playback.frames) {
+    expect(frame.ms).toBeGreaterThanOrEqual(400);
+    expect(frame.ms).toBeLessThanOrEqual(700);
+    expect(isTienGowView(frame.view)).toBe(true);
+  }
+
+  const presented = presentRoomCommandSnapshot({
+    room: { game_slug: 'tien-gow' as const, state: drained.state, status: 'playing' },
+    members: oneHumanThreeCpu,
+    cpuBefore: state,
+    cpuMoves: drained.applied,
+    cpuStates: drained.states,
+  }, 'human');
+  const body = JSON.stringify(presented);
+  expect(body).not.toContain('cpuBefore');
+  expect(body).not.toContain('cpuMoves');
+  expect(body).not.toContain('cpuStates');
+  expect(presented).toHaveProperty('cpuFrames');
+  for (const tile of hiddenTilesFor(drained.state, 1, 0)) expect(body).not.toContain(tile);
+  for (const tile of hiddenTilesFor(drained.state, 2, 0)) expect(body).not.toContain(tile);
+  for (const tile of hiddenTilesFor(drained.state, 3, 0)) expect(body).not.toContain(tile);
+
+  const plan = tienGowCpuPlaybackPlan({
+    opening: playback.opening,
+    frames: playback.frames,
+    finalState: projectView(drained.state, 0),
+  });
+  expect(plan[0]?.waitMs).toBe(0);
+  expect(plan[0]?.state).toEqual(playback.opening);
+  expect(plan.slice(1).every((step) => step.waitMs >= 400 && step.waitMs <= 700)).toBe(true);
+  expect(plan[plan.length - 1]?.state.trick?.plays.length ?? 0).toBeLessThan(4);
+  expect(plan.some((step) => step.state.trick?.plays.length === 4)).toBe(true);
+});
+
+test('example skips use the short step and other games do not receive a playback list', () => {
+  expect(tienGowCpuMoveMs({ type: 'skipExample' })).toBe(TGW_CPU_SKIP_MS);
+  expect(tienGowCpuMoveMs({ type: 'claimExample' })).toBe(TGW_CPU_PLAY_MS);
+  expect(tienGowCpuStepMs(50)).toBe(400);
+  expect(tienGowCpuStepMs(900)).toBe(700);
+  expect(tienGowCpuStepMs(600)).toBe(600);
+  expect(roomRefreshIsStale(true, 1, 1)).toBe(true);
+  expect(roomRefreshIsStale(false, 1, 2)).toBe(true);
+  expect(roomRefreshIsStale(false, 2, 2)).toBe(false);
+
+  const presented = presentRoomCommandSnapshot({
+    room: { game_slug: 'tic-tac-toe' as const, state: { board: [] } },
+    members: [],
+    cpuBefore: { hands: ['secret-tile'] },
+    cpuMoves: [{ seat: 1, move: { type: 'dump', tiles: ['secret-tile'] } }],
+    cpuStates: [{ hands: ['secret-tile'] }],
+  }, 'human');
+  expect(presented).not.toHaveProperty('cpuFrames');
+  expect(presented).not.toHaveProperty('cpuOpening');
+  expect(JSON.stringify(presented)).not.toContain('secret-tile');
+});
+
 test('the playroom board plays from the projected view and never mounts other hands', async () => {
   const board = await readFile(new URL('../app/tien-gow-board.tsx', import.meta.url), 'utf8');
   expect(board).toContain('view.hand');
@@ -212,6 +295,8 @@ test('the playroom board plays from the projected view and never mounts other ha
   expect(board).not.toContain('view.hands');
   expect(board).not.toContain('state.hands');
   expect(board).toContain('legal');
+  expect(board).toContain('data-trick-hold');
+  expect(board).toContain('食');
 
   const client = await readFile(new URL('../app/room/[code]/room-client.tsx', import.meta.url), 'utf8');
   expect(client).toContain('TienGowBoard');
@@ -219,5 +304,7 @@ test('the playroom board plays from the projected view and never mounts other ha
   expect(client).not.toContain("table: 'room_members'");
   expect(client).toContain('30000');
   expect(client).toContain('isTienGowView');
+  expect(client).toContain('tienGowCpuPlaybackPlan');
+  expect(client).toContain('roomRefreshIsStale');
   expect(client).not.toContain('打天九 moves are not available yet.');
 });

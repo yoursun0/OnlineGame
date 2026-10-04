@@ -16,6 +16,7 @@ import { roomHeadline } from '../../room-headline';
 import { canHostStartRoom } from '../../room-start';
 import { canShowRoomReplay } from '../../room-replay';
 import { tienGowLobbySlots, tienGowSeatMark, tienGowSeatWind } from '../../tien-gow-seats';
+import { roomRefreshIsStale, tienGowCpuPlaybackPlan, type TienGowCpuFrame } from '../../tien-gow-cpu-playback';
 import { canDealTienGowHand, tableFromLobbyState, type TienGowLobbyState } from '../../tien-gow-table';
 import { TienGowTableOptions } from '../../tien-gow-table-options';
 
@@ -63,6 +64,7 @@ export function RoomClient({ code }: { code: string }) {
   const lastVersionRef = useRef(0);
   const hasSnapshotRef = useRef(false);
   const animatingRef = useRef(false);
+  const playbackGeneration = useRef(0);
   const isConnect = snapshot?.room.game_slug === 'connect-four';
   const isDownstairs = snapshot?.room.game_slug === 'downstairs';
   const isTienGow = snapshot?.room.game_slug === 'tien-gow';
@@ -78,7 +80,7 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? 'Solo alone, or invite up to three friends for a Shared well (max 4). Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish. Joins after start are rejected.'
       : isTienGow
-        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Host sets Table options in the lobby (lab defaults). Each human only sees their own hand; CPU seats play immediately. Min 1 human; 2–4 humans must all be ready.'
+        ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Host sets Table options in the lobby (lab defaults). Each human only sees their own hand. CPU seats then play one step at a time. Min 1 human; 2–4 humans must all be ready.'
         : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
@@ -92,14 +94,16 @@ export function RoomClient({ code }: { code: string }) {
     help: isDownstairs
       ? '可單人即開 Solo 井，或邀請最多三位朋友開 Shared 共用井（最多 4 人）。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。開局後無法再加入。'
       : isTienGow
-        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。房主在大廳設定臺面規則（與 lab 預設相同）。每位玩家只看見自己的手牌；電腦座位會立刻出牌。至少 1 人即可開；2–4 人時全員要準備。'
+        ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。房主在大廳設定臺面規則（與 lab 預設相同）。每位玩家只看見自己的手牌。電腦之後會逐手出牌。至少 1 人即可開；2–4 人時全員要準備。'
         : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
   const refresh = useCallback(async () => {
     if (animatingRef.current) return;
+    const generation = playbackGeneration.current;
     try {
       const result = await fetchSnapshot(code, lastVersionRef.current);
+      if (roomRefreshIsStale(animatingRef.current, generation, playbackGeneration.current)) return;
       const alreadyHadSnapshot = hasSnapshotRef.current;
       lastVersionRef.current = result.snapshot.room.version;
       hasSnapshotRef.current = true;
@@ -128,17 +132,33 @@ export function RoomClient({ code }: { code: string }) {
   }, [snapshot?.room.id, refresh]);
 
 
-  async function publishCommandSnapshot(payload: Snapshot & { cpuFrames?: GameState[] }) {
-    const frames = payload.cpuFrames ?? [];
-    animatingRef.current = frames.length > 0;
+  function holdRoomRefresh() {
+    if (snapshot?.room.game_slug !== 'tien-gow') return;
+    playbackGeneration.current += 1;
+    animatingRef.current = true;
+  }
+
+  async function publishCommandSnapshot(payload: Snapshot & { cpuOpening?: unknown; cpuFrames?: TienGowCpuFrame[] }) {
+    const plan = payload.room.game_slug === 'tien-gow'
+      ? tienGowCpuPlaybackPlan({
+          opening: payload.cpuOpening,
+          frames: payload.cpuFrames ?? [],
+          finalState: payload.room.state,
+        })
+      : [];
+    if (plan.length > 0) {
+      playbackGeneration.current += 1;
+      animatingRef.current = true;
+    }
     try {
-      for (const frame of frames) {
-        setSnapshot({ ...payload, room: { ...payload.room, state: frame } });
-        await new Promise((resolve) => window.setTimeout(resolve, 400));
+      for (const step of plan) {
+        if (step.waitMs > 0) await new Promise((resolve) => window.setTimeout(resolve, step.waitMs));
+        setSnapshot({ ...payload, room: { ...payload.room, state: step.state } });
       }
       lastVersionRef.current = payload.room.version;
       hasSnapshotRef.current = true;
-      setSnapshot(payload);
+      const { cpuOpening: _cpuOpening, cpuFrames: _cpuFrames, ...rest } = payload;
+      setSnapshot(rest);
     } finally {
       animatingRef.current = false;
     }
@@ -146,6 +166,7 @@ export function RoomClient({ code }: { code: string }) {
 
   async function action(actionName: string, body: Record<string, unknown> = {}) {
     setBusy(true); setError('');
+    holdRoomRefresh();
     try {
       const result = await requestWithGuestRetry(
         async (accessToken) => {
@@ -160,16 +181,17 @@ export function RoomClient({ code }: { code: string }) {
       );
       setToken(result.accessToken);
       setGuestId(result.guestId);
-      const payload = result.data as Snapshot & { left?: boolean; cpuFrames?: GameState[] };
+      const payload = result.data as Snapshot & { left?: boolean; cpuOpening?: unknown; cpuFrames?: TienGowCpuFrame[] };
       if (payload.left) { window.location.assign('/'); return; }
       await publishCommandSnapshot(payload);
       if (actionName === 'report') { setReportSubmitted(true); setReportReason(''); }
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Room action failed.', language)); }
-    finally { setBusy(false); }
+    finally { animatingRef.current = false; setBusy(false); }
   }
 
   async function playMove(body: { cell?: number; column?: number } | TienGowMove) {
     setBusy(true); setError('');
+    holdRoomRefresh();
     try {
       const result = await requestWithGuestRetry(
         async (accessToken) => {
@@ -184,10 +206,10 @@ export function RoomClient({ code }: { code: string }) {
       );
       setToken(result.accessToken);
       setGuestId(result.guestId);
-      const payload = result.data as Snapshot & { cpuFrames?: GameState[] };
+      const payload = result.data as Snapshot & { cpuOpening?: unknown; cpuFrames?: TienGowCpuFrame[] };
       await publishCommandSnapshot(payload);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Move rejected.', language)); }
-    finally { setBusy(false); }
+    finally { animatingRef.current = false; setBusy(false); }
   }
 
   const onWellPersisted = useCallback((payload: unknown) => {

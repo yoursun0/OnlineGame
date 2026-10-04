@@ -18,6 +18,12 @@ import './lab/tien-gow/lab.css';
 
 type BoardMember = { guest_id: string; display_name: string; seat: number; is_cpu?: boolean };
 
+function trickEater(trick: NonNullable<View['trick']>): number {
+  const beats = trick.plays.filter((play) => play.type === 'beat');
+  if (beats.length > 0) return beats[beats.length - 1].seat;
+  return trick.leader;
+}
+
 export function TienGowBoard({
   view,
   members,
@@ -48,6 +54,7 @@ export function TienGowBoard({
   const [selected, setSelected] = useState<string[]>([]);
   const zh = language === 'zh-Hant';
   const playCount = view.trick?.plays.length ?? 0;
+  const trickHold = playCount >= 4 && view.trick ? view.trick : null;
   const turnKey = tienGowTurnClockKey({ phase: view.phase, toAct: view.toAct, playCount });
   const actor = tienGowTurnActor(view.phase, view.toAct, members);
   const [liveStartedAt, setLiveStartedAt] = useState(() => clockStartedAt ?? Date.now());
@@ -108,14 +115,16 @@ export function TienGowBoard({
     setSelected((current) => (current.includes(id) ? current.filter((tile) => tile !== id) : [...current, id]));
   }
 
-  const status = view.phase === 'recap'
+  const status = trickHold
+    ? `${tienGowSeatWind(trickEater(trickHold), language)} 食`
+    : view.phase === 'recap'
     ? (zh ? `${tienGowSeatWind(view.jieSeat ?? 0, language)} 結` : `${tienGowSeatWind(view.jieSeat ?? 0, language)} 結`)
     : view.phase === 'example'
       ? (zh ? '例牌窗口' : 'Example window')
       : ownTurn
         ? (view.phase === 'lead' ? (zh ? '你出' : 'Your lead') : (zh ? '你打或墊' : 'Beat or dump'))
         : (zh ? `${tienGowSeatWind(view.toAct, language)} 出牌中` : `${tienGowSeatWind(view.toAct, language)} to act`);
-  const statusWithClock = clock.remainingLabel ? `${status} · ${clock.remainingLabel}` : status;
+  const statusWithClock = !trickHold && clock.remainingLabel ? `${status} · ${clock.remainingLabel}` : status;
   const warn = clock.phase === 'warn';
   const recap = view.phase === 'recap' ? view.recap : null;
   const recapFlags = recap
@@ -135,7 +144,7 @@ export function TienGowBoard({
         {layout.map(({ seat, place, region }) => {
           const member = members.find((candidate) => candidate.seat === seat);
           const self = seat === view.seat;
-          const toAct = view.phase !== 'recap' && view.toAct === seat;
+          const toAct = !trickHold && view.phase !== 'recap' && view.toAct === seat;
           return (
             <div className={`tgw-seat ${place}${toAct ? ' to-act' : ''}${toAct && warn ? ' clock-warn' : ''}`} data-seat={seat} data-region={region} key={seat}>
               <div className="tgw-seat-meta">
@@ -149,8 +158,8 @@ export function TienGowBoard({
           );
         })}
         <div className="tgw-center">
-          <div className="tgw-trick-board">
-            <strong className={`tgw-status${warn ? ' clock-warn' : ''}`}>{statusWithClock}</strong>
+          <div className="tgw-trick-board" data-trick-hold={trickHold ? '1' : '0'}>
+            <strong className={`tgw-status${warn && !trickHold ? ' clock-warn' : ''}`}>{statusWithClock}</strong>
             {layout.map(({ seat, place, region }) => {
               const playOnTable = view.trick?.plays.find((item) => item.seat === seat);
               return (
@@ -174,7 +183,7 @@ export function TienGowBoard({
       {clock.nudge ? <p className="tgw-clock-nudge" role="status">{clock.nudge}</p> : null}
       <TienGowTableSummary table={view.table} language={language} />
 
-      {recap ? (
+      {recap && !trickHold ? (
         <div className="tgw-recap" aria-label={zh ? '結' : 'Hand recap'}>
           <p className="tgw-kicker">{zh ? '結' : 'Settle'}</p>
           <table>

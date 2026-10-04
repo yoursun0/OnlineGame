@@ -6,6 +6,7 @@ import {
   type Move,
   type State,
 } from '@playroom/tien-gow';
+import { tienGowCpuPlaybackFrames } from '../../tien-gow-cpu-playback';
 import { appendGameEvents } from './append-game-events';
 
 export { isTienGowView };
@@ -127,7 +128,7 @@ export async function applyTienGowCpuTurns(room: CpuRoom, members: CpuMember[]) 
     };
   });
   await appendGameEvents(room.id, steps[0]!.guest_id, room.version, steps);
-  return { moves: drained.applied, states: drained.states };
+  return { moves: drained.applied, states: drained.states, before: room.state };
 }
 
 export function presentRoomCommandSnapshot<T extends {
@@ -135,14 +136,31 @@ export function presentRoomCommandSnapshot<T extends {
   members: Array<{ guest_id: string; seat: number }>;
   events?: Array<{ payload?: unknown }>;
   cpuStates?: unknown[];
+  cpuMoves?: unknown[];
+  cpuBefore?: unknown;
 }>(snapshot: T, viewerGuestId: string) {
-  const { cpuStates, ...rest } = snapshot;
+  const { cpuStates, cpuMoves, cpuBefore, ...rest } = snapshot;
   const projected = projectTienGowSnapshot(rest, viewerGuestId);
-  if (!cpuStates?.length || snapshot.room.game_slug !== 'tien-gow') return projected;
+  if (snapshot.room.game_slug !== 'tien-gow') return projected;
   const member = snapshot.members.find((candidate) => candidate.guest_id === viewerGuestId);
   if (!member) return projected;
-  return {
-    ...projected,
-    cpuFrames: cpuStates.filter(isTienGowState).map((state) => projectView(state, member.seat)),
-  };
+  const states = (cpuStates ?? []).filter(isTienGowState);
+  const moves = readCpuMoves(cpuMoves);
+  if (!isTienGowState(cpuBefore) || states.length === 0 || moves.length === 0) return projected;
+  const playback = tienGowCpuPlaybackFrames(cpuBefore, moves, states, member.seat);
+  if (playback.frames.length === 0) return projected;
+  return { ...projected, cpuOpening: playback.opening, cpuFrames: playback.frames };
+}
+
+function readCpuMoves(value: unknown): Array<{ seat: number; move: Move }> {
+  if (!Array.isArray(value)) return [];
+  const moves: Array<{ seat: number; move: Move }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const seat = (item as { seat?: unknown }).seat;
+    const parsed = parseTienGowMove((item as { move?: unknown }).move);
+    if (typeof seat !== 'number' || !parsed.ok) continue;
+    moves.push({ seat, move: parsed.move });
+  }
+  return moves;
 }

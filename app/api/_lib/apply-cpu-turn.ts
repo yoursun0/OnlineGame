@@ -62,13 +62,13 @@ export async function applyCpuTurnIfNeeded(room: CpuRoom, members: CpuMember[]) 
 export async function snapshotAfterCpuTurn<T extends { room: { id: string; status: string; version: number; state: unknown; game_slug?: string }; members: CpuMember[] }>(
   snapshot: T,
   reload: () => Promise<T>,
-  apply: (room: CpuRoom, members: CpuMember[]) => Promise<void | { moves: unknown[]; states?: unknown[] }> = applyCpuTurnIfNeeded,
+  apply: (room: CpuRoom, members: CpuMember[]) => Promise<void | { moves: unknown[]; states?: unknown[]; before?: unknown }> = applyCpuTurnIfNeeded,
   roomCode?: string,
-): Promise<T & { cpuMoves?: unknown[]; cpuStates?: unknown[] }> {
+): Promise<T & { cpuMoves?: unknown[]; cpuStates?: unknown[]; cpuBefore?: unknown }> {
   if (snapshot.room.status !== 'playing') return snapshot;
   const room = { ...snapshot.room };
   if (!pendingCpuMove(room, snapshot.members)) return snapshot;
-  let produced: void | { moves: unknown[]; states?: unknown[] } = undefined;
+  let produced: void | { moves: unknown[]; states?: unknown[]; before?: unknown } = undefined;
   try {
     produced = await apply(room, snapshot.members);
   } catch (error) {
@@ -76,5 +76,5 @@ export async function snapshotAfterCpuTurn<T extends { room: { id: string; statu
   }
   const reloaded = await reload();
   if (!produced?.moves?.length) return reloaded;
-  return { ...reloaded, cpuMoves: produced.moves, cpuStates: produced.states };
+  return { ...reloaded, cpuMoves: produced.moves, cpuStates: produced.states, cpuBefore: produced.before };
 }
