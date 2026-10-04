@@ -68,7 +68,7 @@ export async function snapshotAfterCpuTurn<T extends { room: { id: string; statu
   if (snapshot.room.status !== 'playing') return snapshot;
   const room = { ...snapshot.room };
   if (!pendingCpuMove(room, snapshot.members)) return snapshot;
-  let produced: void | { moves: unknown[]; states?: unknown[] };
+  let produced: void | { moves: unknown[]; states?: unknown[] } = undefined;
   try {
     produced = await apply(room, snapshot.members);
   } catch (error) {

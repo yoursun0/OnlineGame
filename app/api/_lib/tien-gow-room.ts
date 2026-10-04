@@ -134,8 +134,8 @@ export function presentRoomCommandSnapshot<T extends {
   room: { game_slug?: string; state: unknown };
   members: Array<{ guest_id: string; seat: number }>;
   events?: Array<{ payload?: unknown }>;
-  cpuStates?: State[];
-}>(snapshot: T, viewerGuestId: string): T & { cpuFrames?: unknown[] } {
+  cpuStates?: unknown[];
+}>(snapshot: T, viewerGuestId: string) {
   const { cpuStates, ...rest } = snapshot;
   const projected = projectTienGowSnapshot(rest, viewerGuestId);
   if (!cpuStates?.length || snapshot.room.game_slug !== 'tien-gow') return projected;
@@ -143,6 +143,6 @@ export function presentRoomCommandSnapshot<T extends {
   if (!member) return projected;
   return {
     ...projected,
-    cpuFrames: cpuStates.map((state) => projectView(state, member.seat)),
+    cpuFrames: cpuStates.filter(isTienGowState).map((state) => projectView(state, member.seat)),
   };
 }

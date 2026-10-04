@@ -18,7 +18,23 @@ import { dealPlayroomHand, lobbyStateWithTable, parsePlayroomTable, tableFromLob
 
 type Params = { params: Promise<{ code: string }> };
 
-async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) {
+export type RoomSnapshot = {
+  room: {
+    id: string;
+    code: string;
+    game_slug: string;
+    mode: 'realtime' | 'turn_based';
+    status: 'open' | 'playing' | 'finished' | 'expired';
+    host_guest_id: string;
+    state: any;
+    version: number;
+    max_players: number;
+  };
+  members: Array<{ guest_id: string; display_name: string; seat: number; is_ready: boolean; is_cpu?: boolean }>;
+  events: Array<{ version: number; event_type: string; payload?: unknown }>;
+};
+
+async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0): Promise<RoomSnapshot> {
   const admin = getAdminClient();
   const { data, error } = await admin.rpc('get_room_snapshot', {
     p_code: code,
@@ -26,9 +42,9 @@ async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) 
     p_since_version: sinceVersion,
   });
   if (error) throw error;
-  const snapshot = typeof data === 'string' ? JSON.parse(data) as { room: unknown; members: unknown; events: unknown } : data;
-  if (!snapshot || typeof snapshot !== 'object' || !('room' in snapshot)) throw new Error('Room not found or expired.');
-  return snapshot as { room: Record<string, unknown>; members: Array<Record<string, unknown>>; events: Array<Record<string, unknown>> };
+  const snapshot = (typeof data === 'string' ? JSON.parse(data) : data) as RoomSnapshot | null;
+  if (!snapshot?.room?.id) throw new Error('Room not found or expired.');
+  return snapshot;
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
