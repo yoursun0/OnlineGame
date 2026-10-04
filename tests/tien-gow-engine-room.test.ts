@@ -191,10 +191,13 @@ test('the move API validates actor seat and returns projectView after CPU drain'
   expect(moveRoute).toContain('validateMove');
   expect(moveRoute).toContain('applyMove');
   expect(moveRoute).toContain('parseTienGowMove');
-  expect(moveRoute).toContain('projectTienGowSnapshot');
+  expect(moveRoute).toContain('presentRoomCommandSnapshot');
   expect(moveRoute).toContain('snapshotAfterCpuTurn');
 
   const roomRoute = await readFile(new URL('../app/api/rooms/[code]/route.ts', import.meta.url), 'utf8');
+  const getRoute = roomRoute.slice(roomRoute.indexOf('export async function GET'), roomRoute.indexOf('export async function POST'));
+  expect(getRoute).toContain('getRoomSnapshot');
+  expect(getRoute).not.toContain('snapshotAfterCpuTurn');
   expect(roomRoute).toContain('projectTienGowSnapshot');
 
   const cpu = await readFile(new URL('../app/api/_lib/apply-cpu-turn.ts', import.meta.url), 'utf8');
@@ -212,6 +215,9 @@ test('the playroom board plays from the projected view and never mounts other ha
 
   const client = await readFile(new URL('../app/room/[code]/room-client.tsx', import.meta.url), 'utf8');
   expect(client).toContain('TienGowBoard');
+  expect(client).toContain("table: 'rooms'");
+  expect(client).not.toContain("table: 'room_members'");
+  expect(client).toContain('30000');
   expect(client).toContain('isTienGowView');
   expect(client).not.toContain('打天九 moves are not available yet.');
 });

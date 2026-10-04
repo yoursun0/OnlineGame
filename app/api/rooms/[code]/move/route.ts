@@ -7,7 +7,7 @@ import { applyMove, validateMove, type State as TienGowState } from '@playroom/t
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../../_lib/apply-cpu-turn';
-import { isTienGowState, parseTienGowMove, projectTienGowSnapshot, publicTienGowMovePayload } from '../../../_lib/tien-gow-room';
+import { isTienGowState, parseTienGowMove, presentRoomCommandSnapshot, publicTienGowMovePayload } from '../../../_lib/tien-gow-room';
 import { getRoomSnapshot } from '../route';
 
 type Params = { params: Promise<{ code: string }> };
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       undefined,
       code.toUpperCase(),
     );
-    return Response.json(projectTienGowSnapshot(drained, guest.id));
+    return Response.json(presentRoomCommandSnapshot(drained, guest.id));
   } catch (error) {
     logApiFailure('/api/rooms/[code]/move', error);
     return errorResponse(error);

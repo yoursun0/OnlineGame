@@ -22,6 +22,7 @@ Current order:
 16. `20260927000100_free_tier_soft_gates.sql` — issue #58 soft gates. Superseded by migration 18; do not edit.
 17. `20260927000200_append_game_events.sql` — one-transaction computer reply. Superseded by migration 18; do not edit.
 18. `20260927000300_revert_soft_gate_functions.sql` — restore the 6-hour idle sweep and room create, and drop the unused soft-gate helpers.
+19. `20261004000100_room_snapshot_and_event_batch.sql` — one snapshot read, and one transaction for a computer-move batch.
 
 Apply and verify against `playroom` only. Do not target `playroom-dev`:
 

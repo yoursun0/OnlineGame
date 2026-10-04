@@ -11,7 +11,7 @@ import { ticTacToe } from '@playroom/tic-tac-toe';
 import { ApiError, enforceRateLimit, errorResponse, getAdminClient, getAuthenticatedGuest, getClientIpHash, readJson } from '../../_lib/supabase-admin';
 import { logApiFailure, logRoomLifecycle } from '../../_lib/observability';
 import { snapshotAfterCpuTurn } from '../../_lib/apply-cpu-turn';
-import { isTienGowState, projectTienGowSnapshot } from '../../_lib/tien-gow-room';
+import { isTienGowState, presentRoomCommandSnapshot, projectTienGowSnapshot } from '../../_lib/tien-gow-room';
 import { isPlayroomRoomCode, PLAYROOM_ROOM_CODE_HINT } from '../../../room-code';
 import { downstairsReplayGuestIds } from '../../../room-replay';
 import { dealPlayroomHand, lobbyStateWithTable, parsePlayroomTable, tableFromLobbyState } from '../../../tien-gow-table';
@@ -20,17 +20,15 @@ type Params = { params: Promise<{ code: string }> };
 
 async function getRoomSnapshot(code: string, guestId: string, sinceVersion = 0) {
   const admin = getAdminClient();
-  const { data: room, error: roomError } = await admin.from('rooms').select('*').eq('code', code).maybeSingle();
-  if (roomError) throw roomError;
-  if (!room) throw new Error('Room not found or expired.');
-  const { data: members, error: membersError } = await admin.from('room_members').select('*').eq('room_id', room.id).order('seat');
-  if (membersError) throw membersError;
-  if (!members?.some((member) => member.guest_id === guestId)) throw new Error('Join this room before reading its state.');
-  let eventsQuery = admin.from('game_events').select('*').eq('room_id', room.id).order('version', { ascending: true }).limit(100);
-  if (sinceVersion > 0) eventsQuery = eventsQuery.gt('version', sinceVersion);
-  const { data: events, error: eventsError } = await eventsQuery;
-  if (eventsError) throw eventsError;
-  return { room, members: members ?? [], events: events ?? [] };
+  const { data, error } = await admin.rpc('get_room_snapshot', {
+    p_code: code,
+    p_guest_id: guestId,
+    p_since_version: sinceVersion,
+  });
+  if (error) throw error;
+  const snapshot = typeof data === 'string' ? JSON.parse(data) as { room: unknown; members: unknown; events: unknown } : data;
+  if (!snapshot || typeof snapshot !== 'object' || !('room' in snapshot)) throw new Error('Room not found or expired.');
+  return snapshot as { room: Record<string, unknown>; members: Array<Record<string, unknown>>; events: Array<Record<string, unknown>> };
 }
 
 export async function GET(request: NextRequest, { params }: Params) {
@@ -44,12 +42,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const sinceVersion = sinceRaw === null ? 0 : Number(sinceRaw);
     if (!Number.isInteger(sinceVersion) || sinceVersion < 0 || sinceVersion > 1000000) throw new ApiError('Invalid event version.', 400);
     return Response.json(projectTienGowSnapshot(
-      await snapshotAfterCpuTurn(
-        await getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
-        () => getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
-        undefined,
-        normalizedCode,
-      ),
+      await getRoomSnapshot(normalizedCode, guest.id, sinceVersion),
       guest.id,
     ));
   } catch (error) {
@@ -233,7 +226,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     } else {
       throw new Error('Unknown room action.');
     }
-    return Response.json(projectTienGowSnapshot(
+    return Response.json(presentRoomCommandSnapshot(
       await snapshotAfterCpuTurn(
         await getRoomSnapshot(normalizedCode!, guest.id),
         () => getRoomSnapshot(normalizedCode!, guest.id),

@@ -62,6 +62,7 @@ export function RoomClient({ code }: { code: string }) {
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const lastVersionRef = useRef(0);
   const hasSnapshotRef = useRef(false);
+  const animatingRef = useRef(false);
   const isConnect = snapshot?.room.game_slug === 'connect-four';
   const isDownstairs = snapshot?.room.game_slug === 'downstairs';
   const isTienGow = snapshot?.room.game_slug === 'tien-gow';
@@ -96,6 +97,7 @@ export function RoomClient({ code }: { code: string }) {
   };
 
   const refresh = useCallback(async () => {
+    if (animatingRef.current) return;
     try {
       const result = await fetchSnapshot(code, lastVersionRef.current);
       const alreadyHadSnapshot = hasSnapshotRef.current;
@@ -111,18 +113,36 @@ export function RoomClient({ code }: { code: string }) {
   useEffect(() => {
     if (!snapshot) return;
     const supabase = getBrowserSupabase();
-    const interval = window.setInterval(() => { void refresh(); }, supabase ? 5000 : 1500);
+    let interval = window.setInterval(() => { void refresh(); }, supabase ? 5000 : 1500);
     const reconcile = () => { if (document.visibilityState === 'visible') void refresh(); };
     window.addEventListener('online', reconcile);
     document.addEventListener('visibilitychange', reconcile);
     if (!supabase) return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); };
     const channel = supabase.channel(`room:${snapshot.room.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'room_members', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${snapshot.room.id}` }, () => { void refresh(); })
-      .subscribe();
+      .subscribe((status) => {
+        window.clearInterval(interval);
+        interval = window.setInterval(() => { void refresh(); }, status === 'SUBSCRIBED' ? 30000 : 5000);
+      });
     return () => { window.clearInterval(interval); window.removeEventListener('online', reconcile); document.removeEventListener('visibilitychange', reconcile); void supabase.removeChannel(channel); };
   }, [snapshot?.room.id, refresh]);
+
+
+  async function publishCommandSnapshot(payload: Snapshot & { cpuFrames?: GameState[] }) {
+    const frames = payload.cpuFrames ?? [];
+    animatingRef.current = frames.length > 0;
+    try {
+      for (const frame of frames) {
+        setSnapshot({ ...payload, room: { ...payload.room, state: frame } });
+        await new Promise((resolve) => window.setTimeout(resolve, 400));
+      }
+      lastVersionRef.current = payload.room.version;
+      hasSnapshotRef.current = true;
+      setSnapshot(payload);
+    } finally {
+      animatingRef.current = false;
+    }
+  }
 
   async function action(actionName: string, body: Record<string, unknown> = {}) {
     setBusy(true); setError('');
@@ -140,10 +160,9 @@ export function RoomClient({ code }: { code: string }) {
       );
       setToken(result.accessToken);
       setGuestId(result.guestId);
-      const payload = result.data as Snapshot & { left?: boolean };
+      const payload = result.data as Snapshot & { left?: boolean; cpuFrames?: GameState[] };
       if (payload.left) { window.location.assign('/'); return; }
-      lastVersionRef.current = payload.room.version;
-      setSnapshot(payload);
+      await publishCommandSnapshot(payload);
       if (actionName === 'report') { setReportSubmitted(true); setReportReason(''); }
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Room action failed.', language)); }
     finally { setBusy(false); }
@@ -165,9 +184,8 @@ export function RoomClient({ code }: { code: string }) {
       );
       setToken(result.accessToken);
       setGuestId(result.guestId);
-      const payload = result.data as Snapshot;
-      lastVersionRef.current = payload.room.version;
-      setSnapshot(payload);
+      const payload = result.data as Snapshot & { cpuFrames?: GameState[] };
+      await publishCommandSnapshot(payload);
     } catch (requestError) { setError(translateError(requestError instanceof Error ? requestError.message : 'Move rejected.', language)); }
     finally { setBusy(false); }
   }

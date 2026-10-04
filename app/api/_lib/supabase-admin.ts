@@ -1,7 +1,8 @@
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { createHash } from 'node:crypto';
 import { assertPlayroomSupabaseUrl } from '../../lib/playroom-supabase';
+import { verifyGuestAccessToken } from './guest-jwt';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -17,13 +18,11 @@ export function getAdminClient(): SupabaseClient {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-export async function getAuthenticatedGuest(request: NextRequest, admin: SupabaseClient): Promise<User> {
+export async function getAuthenticatedGuest(request: NextRequest, _admin?: SupabaseClient): Promise<{ id: string }> {
   const authorization = request.headers.get('authorization');
   const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
   if (!token) throw new Error('A guest session is required.');
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new Error('The guest session is invalid or expired.');
-  return data.user;
+  return await verifyGuestAccessToken(token);
 }
 
 export function publicErrorMessage(error: unknown, fallback = 'Request failed.') {

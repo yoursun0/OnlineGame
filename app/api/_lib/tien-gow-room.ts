@@ -6,14 +6,14 @@ import {
   type Move,
   type State,
 } from '@playroom/tien-gow';
-import { getAdminClient } from './supabase-admin';
+import { appendGameEvents } from './append-game-events';
 
 export { isTienGowView };
 
 type CpuMember = { guest_id: string; seat: number; is_cpu?: boolean };
 type CpuRoom = { id: string; status: string; version: number; state: unknown; game_slug?: string };
 
-/** Consecutive CPU seats applied in one request. Next GET continues if the cap is hit. */
+/** Consecutive CPU seats written in one command transaction. GET does not continue the drain. */
 export const TGW_CPU_DRAIN_CAP = 24;
 
 const TILE_ID = /^[a-z0-9:-]+$/i;
@@ -63,8 +63,9 @@ export function drainTienGowCpuState(
   state: State,
   members: CpuMember[],
   cap = TGW_CPU_DRAIN_CAP,
-): { state: State; applied: Array<{ seat: number; move: Move }> } {
+): { state: State; applied: Array<{ seat: number; move: Move }>; states: State[] } {
   const applied: Array<{ seat: number; move: Move }> = [];
+  const states: State[] = [];
   let current = state;
   for (let step = 0; step < cap; step += 1) {
     const cpu = pendingTienGowCpuSeat(current, members);
@@ -73,8 +74,9 @@ export function drainTienGowCpuState(
     if (!move) break;
     current = applyMove(current, move, { id: cpu.guest_id, seat: cpu.seat });
     applied.push({ seat: cpu.seat, move });
+    states.push(current);
   }
-  return { state: current, applied };
+  return { state: current, applied, states };
 }
 
 function sanitizeTienGowEventPayload(payload: unknown): unknown {
@@ -109,25 +111,38 @@ export function projectTienGowSnapshot<T extends {
 }
 
 export async function applyTienGowCpuTurns(room: CpuRoom, members: CpuMember[]) {
-  if (!isTienGowState(room.state)) return;
-  let current: CpuRoom = { ...room, state: room.state };
-  for (let step = 0; step < TGW_CPU_DRAIN_CAP; step += 1) {
-    const state = current.state as State;
-    const cpu = pendingTienGowCpuSeat(state, members);
-    if (!cpu) return;
-    const move = nextCpuMove(state, cpu.seat);
-    if (!move) return;
-    const nextState = applyMove(state, move, { id: cpu.guest_id, seat: cpu.seat });
-    const { error } = await getAdminClient().rpc('append_game_event', {
-      p_room_id: current.id,
-      p_guest_id: cpu.guest_id,
-      p_expected_version: current.version,
-      p_state: nextState,
-      p_status: 'playing',
-      p_event_type: 'move',
-      p_payload: publicTienGowMovePayload(move, cpu.seat),
-    });
-    if (error) throw error;
-    current = { ...current, version: current.version + 1, state: nextState };
-  }
+  if (!isTienGowState(room.state)) return { moves: [] as Array<{ seat: number; move: Move }>, states: [] as State[] };
+  const drained = drainTienGowCpuState(room.state, members);
+  if (drained.applied.length === 0) return { moves: [], states: [] as State[] };
+  const steps = drained.applied.map((item, index) => {
+    const guestId = members.find((member) => member.seat === item.seat)?.guest_id;
+    const state = drained.states[index];
+    if (!guestId || !state) throw new Error('Computer seat is missing.');
+    return {
+      guest_id: guestId,
+      state,
+      status: 'playing' as const,
+      event_type: 'move',
+      payload: publicTienGowMovePayload(item.move, item.seat),
+    };
+  });
+  await appendGameEvents(room.id, steps[0]!.guest_id, room.version, steps);
+  return { moves: drained.applied, states: drained.states };
+}
+
+export function presentRoomCommandSnapshot<T extends {
+  room: { game_slug?: string; state: unknown };
+  members: Array<{ guest_id: string; seat: number }>;
+  events?: Array<{ payload?: unknown }>;
+  cpuStates?: State[];
+}>(snapshot: T, viewerGuestId: string): T & { cpuFrames?: unknown[] } {
+  const { cpuStates, ...rest } = snapshot;
+  const projected = projectTienGowSnapshot(rest, viewerGuestId);
+  if (!cpuStates?.length || snapshot.room.game_slug !== 'tien-gow') return projected;
+  const member = snapshot.members.find((candidate) => candidate.guest_id === viewerGuestId);
+  if (!member) return projected;
+  return {
+    ...projected,
+    cpuFrames: cpuStates.map((state) => projectView(state, member.seat)),
+  };
 }
