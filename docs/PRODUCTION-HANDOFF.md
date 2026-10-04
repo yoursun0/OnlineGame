@@ -6,6 +6,7 @@ This is the record of the current public launch configuration. Secret values are
 
 - Supabase project: `playroom`
 - Supabase project ref: `xrkwxaxsmnraygwsmdiq`
+- Local, Preview, and Production share this project. `playroom-dev` is retired.
 - Supabase region: `ap-northeast-2` (Seoul)
 - Supabase plan: Free
 - Vercel project: `helic/online-game`

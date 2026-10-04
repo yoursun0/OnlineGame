@@ -1,15 +1,16 @@
 # PLAYROOM operations runbook
 
-This document is the day-two guide for maintaining the hosted development and production environments. It describes the controls implemented in the repository; provider quotas and dashboard labels can change, so verify them before a launch or capacity decision.
+This document is the day-two guide for the single hosted `playroom` database. It describes the controls implemented in the repository; provider quotas and dashboard labels can change, so verify them before a launch or capacity decision.
 
 ## Environments
 
 | Environment | Supabase | Vercel target | Purpose |
 | --- | --- | --- | --- |
-| Development | Hosted development project | Local development and Preview | Feature work and integration tests |
-| Production | Separate `playroom` project, Seoul (`ap-northeast-2`), free plan | `helic/online-game` Production | Public launch |
+| Local | `playroom` (`xrkwxaxsmnraygwsmdiq`) | none | Feature work and integration tests |
+| Preview | `playroom` (`xrkwxaxsmnraygwsmdiq`) | Preview | Branch previews |
+| Production | `playroom` (`xrkwxaxsmnraygwsmdiq`), Seoul (`ap-northeast-2`), free plan | `helic/online-game` Production | Public site |
 
-Never put production credentials in `.env.local`, Preview, a pull request, or a commit. Preview must use the development Supabase project. The production project is `xrkwxaxsmnraygwsmdiq`; record changes to this mapping in the handoff notes, not in secret-bearing files.
+Do not commit credentials. `.env.local` and Vercel Preview may hold the `playroom` service-role key; it must not enter Git, a pull request, or chat. `playroom-dev` is retired.
 
 ## Daily health check
 

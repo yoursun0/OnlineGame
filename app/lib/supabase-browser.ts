@@ -2,6 +2,7 @@
 
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import type { GuestCredentials, GuestRoomAuth } from './guest-room-fetch';
+import { assertPlayroomSupabaseUrl } from './playroom-supabase';
 
 let browserClient: SupabaseClient | null = null;
 
@@ -10,6 +11,7 @@ export function getBrowserSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
+  assertPlayroomSupabaseUrl(url);
   browserClient = createClient(url, key);
   return browserClient;
 }

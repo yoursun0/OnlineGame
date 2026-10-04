@@ -1,10 +1,18 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { isPlayroomSupabaseUrl } from '../app/lib/playroom-supabase';
 
 const localEnv = await readFile('.env.local', 'utf8').catch(() => '');
 for (const line of localEnv.split(/\r?\n/)) {
   const match = line.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
   if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '');
+}
+
+for (const name of ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'] as const) {
+  const value = process.env[name];
+  if (value && !isPlayroomSupabaseUrl(value)) {
+    throw new Error(`${name} must be the playroom Supabase project. playroom-dev is retired.`);
+  }
 }
 
 const configuredUrl = process.env.PLAYROOM_TEST_URL?.trim();

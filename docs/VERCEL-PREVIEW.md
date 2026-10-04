@@ -8,7 +8,7 @@ commands without embedding any credentials.
 ## Preview environment
 
 Configure these variables in the Vercel project with the **Preview** target and
-values from the hosted development Supabase project (`playroom-dev`):
+the same `playroom` values used by Production (`xrkwxaxsmnraygwsmdiq`). Do not use `playroom-dev`:
 
 | Variable | Vercel target | Browser-visible |
 | --- | --- | --- |
@@ -46,8 +46,8 @@ Against the Preview URL, use two independent browser contexts and verify:
 Before promoting a Preview deployment, confirm:
 
 - `bun run typecheck`, `bun run build`, and the Issue #3 integration test pass.
-- Hosted development migrations are applied and `supabase migration list`
-  reports no pending migration for the target project.
+- Migrations are applied to `playroom` and `supabase migration list --project-ref xrkwxaxsmnraygwsmdiq`
+  reports no pending migration.
 - RLS is enabled for `rooms`, `room_members`, and `game_events`; anonymous
   clients can use the intended RPC/API paths but cannot write tables directly.
 - Required Preview variables are present, and the server-only key is absent from

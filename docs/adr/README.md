@@ -8,4 +8,5 @@ Current ADRs:
 
 - [0002 — Server-authoritative room state](0002-server-authoritative-room-state.md)
 - [0003 — Anonymous guest sessions](0003-anonymous-guest-sessions.md)
-- [0004 — Separate Supabase environments](0004-separate-supabase-environments.md)
+- [0004 — Separate Supabase environments](0004-separate-supabase-environments.md) (superseded)
+- [0005 — One hosted Supabase project](0005-single-playroom-supabase.md)

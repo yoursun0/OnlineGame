@@ -40,7 +40,7 @@ Read [docs/REPOSITORY-ARCHITECTURE.md](docs/REPOSITORY-ARCHITECTURE.md) before c
 
 ## Local development
 
-Prerequisites: Bun 1.x and access to the hosted development Supabase project. Docker/Supabase local services are optional and must not be introduced without an explicit approval; the normal workflow uses hosted development Supabase.
+Prerequisites: Bun 1.x and access to the hosted `playroom` Supabase project (`xrkwxaxsmnraygwsmdiq`). Docker/Supabase local services are optional and must not be introduced without an explicit approval; the normal workflow uses that hosted project.
 
 ```powershell
 # clone and enter the repository
@@ -50,14 +50,14 @@ cd OnlineGame
 # install exactly from the lockfile
 bun install --frozen-lockfile
 
-# create a local file from the template, then fill development values only
+# create a local file from the template, then fill playroom project values
 Copy-Item .env.example .env.local
 
 # start Next.js
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). `.env.local` is ignored by Git. Use the hosted development Supabase project for local work; never point local development at production.
+Open [http://localhost:3000](http://localhost:3000). `.env.local` is ignored by Git. Point it at the hosted `playroom` project, the same database used by Preview and Production.
 
 Useful checks:
 
@@ -69,7 +69,7 @@ bun run build
 bun test
 ```
 
-The integration tests read `.env.local`, use the hosted development Supabase project, and default to `http://127.0.0.1:3000`. `bun test` starts and stops a local Next.js test server automatically; set `PLAYROOM_TEST_URL` to test a deployed target instead. Test records are temporary and deleted in `afterAll`.
+The integration tests read `.env.local`, use the hosted `playroom` project, and default to `http://127.0.0.1:3000`. `bun test` starts and stops a local Next.js test server automatically; set `PLAYROOM_TEST_URL` to test a deployed target instead. Test records are temporary and deleted in `afterAll`. They write the public database, so do not broaden cleanup beyond rooms the test created.
 
 The original static concept can still be previewed without Next.js:
 
@@ -81,7 +81,7 @@ Then open [http://127.0.0.1:4173/prototype/index.html](http://127.0.0.1:4173/pro
 
 ## Environment variables
 
-Copy [.env.example](.env.example) to `.env.local` and use development values:
+Copy [.env.example](.env.example) to `.env.local` and use the `playroom` project values:
 
 | Variable | Browser-visible | Purpose |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ Copy [.env.example](.env.example) to `.env.local` and use development values:
 | `SUPABASE_URL` | No | Server-side Supabase URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Server-only administrative key for route handlers; never commit or prefix with `NEXT_PUBLIC_` |
 | `NEXT_PUBLIC_APP_URL` | Yes in metadata | Canonical URL used for Open Graph/Twitter metadata |
-| `RATE_LIMIT_SALT` | No | Server-only salt for one-way IP hashes; use a different random value per environment |
+| `RATE_LIMIT_SALT` | No | Server-only salt for one-way IP hashes; use the `playroom` value locally and in Preview |
 
 Do not paste credentials, tokens, service-role keys, or database passwords into issues, chat, commits, screenshots, or documentation. If a secret is exposed, rotate it in the provider immediately.
 
@@ -129,7 +129,7 @@ bunx supabase db push --project-ref <project-ref> --yes
 bunx supabase migration list --project-ref <project-ref>
 ```
 
-Use the development project for Preview/local work and the separate production project for Production. See [supabase/migrations/README.md](supabase/migrations/README.md) and [docs/PRODUCTION-HANDOFF.md](docs/PRODUCTION-HANDOFF.md).
+Apply migrations only to `playroom` (`xrkwxaxsmnraygwsmdiq`). Local, Preview, and Production share that project. See [supabase/migrations/README.md](supabase/migrations/README.md) and [docs/PRODUCTION-HANDOFF.md](docs/PRODUCTION-HANDOFF.md).
 
 ## Deployments
 
@@ -147,7 +147,7 @@ bunx vercel deploy --scope helic
 git push origin main
 ```
 
-Vercel Production variables are configured in the Vercel project, not in Git. Preview and Production must use different Supabase projects. Production currently uses the Vercel alias above and has no custom domain. See [docs/VERCEL-PREVIEW.md](docs/VERCEL-PREVIEW.md) and [docs/PRODUCTION-HANDOFF.md](docs/PRODUCTION-HANDOFF.md).
+Vercel variables are configured in the Vercel project, not in Git. Preview and Production use the same `playroom` Supabase project. Production currently uses the Vercel alias above and has no custom domain. See [docs/VERCEL-PREVIEW.md](docs/VERCEL-PREVIEW.md) and [docs/PRODUCTION-HANDOFF.md](docs/PRODUCTION-HANDOFF.md).
 
 ## Cost, quota, and abuse controls
 

@@ -13,9 +13,13 @@ export function GuestSession() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const session = await ensureGuestSession();
-      if (!active) return;
-      setStatus(session ? 'ready' : process.env.NEXT_PUBLIC_SUPABASE_URL ? 'error' : 'unavailable');
+      try {
+        const session = await ensureGuestSession();
+        if (!active) return;
+        setStatus(session ? 'ready' : process.env.NEXT_PUBLIC_SUPABASE_URL ? 'error' : 'unavailable');
+      } catch {
+        if (active) setStatus('error');
+      }
     })();
 
     return () => { active = false; };

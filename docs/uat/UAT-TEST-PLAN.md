@@ -1,7 +1,7 @@
 # PLAYROOM local UAT test plan
 
 **Project**: PLAYROOM / 玩房  
-**Build under test**: local Next.js app (`bun run dev` → `http://localhost:3000`) + hosted **development** Supabase  
+**Build under test**: local Next.js app (`bun run dev` → `http://localhost:3000`) + hosted **playroom** Supabase  
 **UAT type**: Hybrid — scripted two-browser acceptance cases, then exploratory  
 **Primary persona**: anonymous guest, no account  
 **Plan date**: 2026-09-12  
@@ -34,13 +34,13 @@ Two tabs in the **same** browser profile are invalid for two-player cases. Guest
 | --- | --- |
 | App | `http://localhost:3000` (use the `localhost` hostname, not `127.0.0.1`; Next.js HMR/hydration fails on the IP) |
 | Command | `bun run dev` from repository root |
-| Backend | Hosted development Supabase only |
-| Secrets | `.env.local` from `.env.example`; never production |
+| Backend | Hosted `playroom` Supabase (`xrkwxaxsmnraygwsmdiq`) |
+| Secrets | `.env.local` from `.env.example`; never commit the service-role key |
 | Browsers | Chromium (required); second engine optional |
 | Languages | `en` and `zh-Hant` via the EN / 中文 toggle |
 | Viewports | Desktop 1280×800; mobile 390×844 |
 
-Do not point local UAT at production (`online-game-helic.vercel.app`) or the production Supabase project.
+Do not point local UAT at the production website (`online-game-helic.vercel.app`). The local app uses the same `playroom` Supabase project as that site.
 
 ### Test data
 
@@ -535,7 +535,7 @@ Fill after execution.
 # UAT Sign-off — PLAYROOM local
 
 **Period**:
-**Environment**: http://localhost:3000 + development Supabase
+**Environment**: http://localhost:3000 + playroom Supabase
 **Recommendation**: GO / NO-GO
 
 ## Summary

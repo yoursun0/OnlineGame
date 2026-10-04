@@ -23,12 +23,12 @@ Current order:
 17. `20260927000200_append_game_events.sql` — one-transaction computer reply. Superseded by migration 18; do not edit.
 18. `20260927000300_revert_soft_gate_functions.sql` — restore the 6-hour idle sweep and room create, and drop the unused soft-gate helpers.
 
-Apply and verify against an explicit target:
+Apply and verify against `playroom` only. Do not target `playroom-dev`:
 
 ```powershell
-bunx supabase migration list --project-ref <project-ref>
-bunx supabase db push --project-ref <project-ref> --yes
-bunx supabase migration list --project-ref <project-ref>
+bunx supabase migration list --project-ref xrkwxaxsmnraygwsmdiq
+bunx supabase db push --project-ref xrkwxaxsmnraygwsmdiq --yes
+bunx supabase migration list --project-ref xrkwxaxsmnraygwsmdiq
 ```
 
 Review RLS and service-role grants after a schema change. Do not run production migrations from a shell with an ambiguous linked project.

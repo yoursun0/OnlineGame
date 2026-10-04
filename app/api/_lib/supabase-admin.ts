@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
 import { createHash } from 'node:crypto';
+import { assertPlayroomSupabaseUrl } from '../../lib/playroom-supabase';
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -12,6 +13,7 @@ export function getAdminClient(): SupabaseClient {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase server environment is not configured.');
+  assertPlayroomSupabaseUrl(url);
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
