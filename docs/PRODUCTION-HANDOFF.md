@@ -9,6 +9,7 @@ This is the record of the current public launch configuration. Secret values are
 - Supabase region: `ap-northeast-2` (Seoul)
 - Supabase plan: Free
 - Vercel project: `helic/online-game`
+- Vercel function region: `icn1` (Seoul). Hobby allows one region; this matches the database. Do not pin functions to `hkg1`, because each room request makes several sequential database calls.
 - Production URL: [https://online-game-helic.vercel.app](https://online-game-helic.vercel.app)
 - Custom domain: none; the Vercel alias is the canonical public URL for now
 - Vercel SSO Deployment Protection: disabled so the public URL is reachable without a Vercel account
@@ -66,3 +67,4 @@ See [OPERATIONS.md](OPERATIONS.md) for quotas, cost controls, webhook policy, an
 3. Keep database changes forward-compatible; do not reset or edit an applied production migration.
 4. Record affected room codes/timestamps, deployment ID, symptoms, and owner.
 5. Test the corrective migration/code in development and Preview before re-promoting.
+
