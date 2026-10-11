@@ -471,3 +471,9 @@ h1, h2, h3, p { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) {
   .cad-shot, .cad-pose-2, .cad-pose-3, .cad-pose-4 { transition: none; }
 }
+
+.cad-warn-face .cad-face { position: absolute; left: 22%; right: 22%; bottom: 46%; height: 16%; border-radius: 40%; background:
+  radial-gradient(circle at 32% 42%, #1b1a24 0 2px, transparent 3px),
+  radial-gradient(circle at 68% 42%, #1b1a24 0 2px, transparent 3px),
+  radial-gradient(circle at 50% 72%, #d4534e 0 5px, transparent 6px); }
+.cad-dog.cad-warn-face .cad-face { bottom: 42%; }

@@ -75,8 +75,6 @@ export function CatAndDogTable({
   const itemLabel: Record<Item, string> = zh
     ? { none: '普通', powerThrow: '力投', stinkBomb: '臭彈', doubleAttack: '雙擊' }
     : { none: 'Plain', powerThrow: 'Power throw', stinkBomb: 'Stink bomb', doubleAttack: 'Double attack' };
-  const aimed = state.toAct === 'dog' ? power - state.wind : power + state.wind;
-
   return (
     <div className="cad-play">
       <div className="cad-meters" aria-label={zh ? '放棄計量' : 'Give-up meters'}>
@@ -92,14 +90,14 @@ export function CatAndDogTable({
         })}
       </div>
       <div className="cad-stage" role="img" aria-label={zh ? '貓狗對擲場地' : 'Cat and Dog yard'}>
-        <div className={`cad-actor cad-cat${defender === 'cat' ? ` cad-pose-${reaction}` : ''}`} aria-hidden="true">
-          <span className="cad-ears" /><span className="cad-head" /><span className="cad-body" /><span className="cad-tail" />
+        <div className={`cad-actor cad-cat${defender === 'cat' ? ` cad-pose-${reaction}` : ''}${state.meters.cat >= 14 && state.meters.cat < 23 ? ' cad-warn-face' : ''}`} aria-hidden="true">
+          <span className="cad-ears" /><span className="cad-head" /><span className="cad-face" /><span className="cad-body" /><span className="cad-tail" />
         </div>
         <div className="cad-fence" aria-hidden="true">
           <span className="cad-wind">{zh ? '風' : 'Wind'} {state.wind > 0 ? `+${state.wind}` : state.wind}</span>
         </div>
-        <div className={`cad-actor cad-dog${defender === 'dog' ? ` cad-pose-${reaction}` : ''}`} aria-hidden="true">
-          <span className="cad-ears" /><span className="cad-head" /><span className="cad-body" /><span className="cad-tail" />
+        <div className={`cad-actor cad-dog${defender === 'dog' ? ` cad-pose-${reaction}` : ''}${state.meters.dog >= 14 && state.meters.dog < 23 ? ' cad-warn-face' : ''}`} aria-hidden="true">
+          <span className="cad-ears" /><span className="cad-head" /><span className="cad-face" /><span className="cad-body" /><span className="cad-tail" />
         </div>
         {projectile ? <span className={`cad-shot cad-shot-${projectile}${hit ? ' cad-shot-hit' : ' cad-shot-miss'} cad-shot-${state.last?.side}`} /> : null}
       </div>
@@ -151,7 +149,6 @@ export function CatAndDogTable({
       >
         <span>{holding ? (zh ? '放開投出' : 'Release') : (zh ? '按住投擲' : 'Hold to throw')}</span>
         <strong>{power}</strong>
-        <small>{zh ? `瞄準 ${aimed}` : `Aim ${aimed}`}</small>
       </button>
     </div>
   );

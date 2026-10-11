@@ -1,4 +1,4 @@
-import { catAndDog, isCatAndDogState, nextCpuMove as nextCatAndDogCpuMove, type CatAndDogState } from '@playroom/cat-and-dog';
+import { catAndDog, catAndDogEventPayload, isCatAndDogState, nextCpuMove as nextCatAndDogCpuMove, type CatAndDogState } from '@playroom/cat-and-dog';
 import { connectFour, nextCpuMove as nextConnectFourMove, type ConnectFourState } from '@playroom/connect-four';
 import { nextCpuMove, ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { logApiFailure } from './observability';
@@ -31,11 +31,9 @@ export async function applyCpuTurnIfNeeded(room: CpuRoom, members: CpuMember[]) 
   const move = pendingCpuMove(room, members);
   if (!cpu || !move) return;
 
-  if (room.game_slug === 'cat-and-dog' && isCatAndDogState(room.state) && move && 'type' in move && (move.type === 'throw' || move.type === 'powerUp')) {
+  if (room.game_slug === 'cat-and-dog' && isCatAndDogState(room.state) && move && 'type' in move && move.type === 'throw') {
     const state = room.state as CatAndDogState;
-    const catMove = move.type === 'powerUp'
-      ? { type: 'powerUp' as const }
-      : { type: 'throw' as const, item: move.item, power: move.power };
+    const catMove = { type: 'throw' as const, item: move.item, power: move.power };
     const validation = catAndDog.validateMove(state, catMove, { id: cpu.guest_id, seat: cpu.seat });
     if (!validation.ok) throw new Error(validation.reason);
     const nextState = catAndDog.applyMove(state, catMove, { id: cpu.guest_id, seat: cpu.seat });
@@ -47,12 +45,7 @@ export async function applyCpuTurnIfNeeded(room: CpuRoom, members: CpuMember[]) 
       p_state: nextState,
       p_status: status === 'playing' ? 'playing' : 'finished',
       p_event_type: 'move',
-      p_payload: {
-        type: catMove.type,
-        item: catMove.type === 'throw' ? catMove.item : null,
-        power: catMove.type === 'throw' ? catMove.power : null,
-        side: state.toAct,
-      },
+      p_payload: catAndDogEventPayload(state, catMove),
     });
     if (error) throw error;
     return;

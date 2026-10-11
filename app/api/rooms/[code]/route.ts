@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createPlayingState, createRematchState, isCatAndDogState, parseDifficulty } from '@playroom/cat-and-dog';
+import { createPlayingState, createRematchState, difficultyForStart, isCatAndDogState } from '@playroom/cat-and-dog';
 import { connectFour } from '@playroom/connect-four';
 import {
   createSharedStartState,
@@ -104,6 +104,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       if (error) throw error;
       logRoomLifecycle('table', { roomCode: normalizedCode, guestId: guest.id, status: 'open' });
     } else if (body.action === 'start') {
+      const beforeStart = await getRoomSnapshot(normalizedCode, guest.id);
+      if (beforeStart.room.game_slug === 'cat-and-dog') {
+        const humans = beforeStart.members.filter((member) => !member.is_cpu);
+        const chosen = difficultyForStart(humans.length, body.difficulty);
+        if (!chosen.ok) throw new ApiError(chosen.reason, 400);
+      }
       const { error } = await admin.rpc('start_room_for_guest', { p_code: normalizedCode, p_guest_id: guest.id });
       if (error) throw error;
       const started = await getRoomSnapshot(normalizedCode, guest.id);
@@ -150,9 +156,9 @@ export async function POST(request: NextRequest, { params }: Params) {
         if (startEventError) throw startEventError;
       } else if (started.room.game_slug === 'cat-and-dog') {
         const humans = started.members.filter((member) => !member.is_cpu);
-        const difficulty = humans.length === 1 ? parseDifficulty(body.difficulty) : null;
-        if (humans.length === 1 && !difficulty) throw new ApiError('Choose a difficulty before starting versus CPU.', 400);
-        const initial = createPlayingState({ roomCode: normalizedCode, difficulty });
+        const chosen = difficultyForStart(humans.length, body.difficulty);
+        if (!chosen.ok) throw new ApiError(chosen.reason, 400);
+        const initial = createPlayingState({ roomCode: normalizedCode, difficulty: chosen.difficulty });
         const { error: startEventError } = await admin.rpc('append_game_event', {
           p_room_id: started.room.id,
           p_guest_id: guest.id,
@@ -160,7 +166,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           p_state: initial,
           p_status: 'playing',
           p_event_type: 'start',
-          p_payload: { difficulty, humans: humans.length },
+          p_payload: { difficulty: chosen.difficulty, humans: humans.length },
         });
         if (startEventError) throw startEventError;
       }

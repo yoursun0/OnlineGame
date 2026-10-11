@@ -107,15 +107,43 @@ export function windTableFor(difficulty: Difficulty | null): WindTable {
   return difficulty === 'expert' ? 'expert' : 'full';
 }
 
-export function drawWind(roomCode: string, drawIndex: number, table: WindTable): number {
-  const values = table === 'expert' ? EXPERT_WIND : FULL_WIND;
+function hashWind(text: string): number {
   let hash = 0x811c9dc5;
-  const text = `${roomCode}\0${drawIndex}`;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
     hash = Math.imul(hash, 0x01000193);
   }
-  return values[(hash >>> 0) % values.length]!;
+  return hash >>> 0;
+}
+
+export function drawWind(roomCode: string, drawIndex: number, table: WindTable): number {
+  const values = table === 'expert' ? EXPERT_WIND : FULL_WIND;
+  const limit = 0x100000000 - (0x100000000 % values.length);
+  let salt = 0;
+  let hash = hashWind(`${roomCode}\0${drawIndex}\0${salt}`);
+  while (hash >= limit) {
+    salt += 1;
+    hash = hashWind(`${roomCode}\0${drawIndex}\0${salt}`);
+  }
+  return values[hash % values.length]!;
+}
+
+export function difficultyForStart(humanCount: number, value: unknown): { ok: true; difficulty: Difficulty | null } | { ok: false; reason: string } {
+  if (humanCount <= 1) {
+    const difficulty = parseDifficulty(value);
+    if (!difficulty) return { ok: false, reason: 'Choose a difficulty before starting versus CPU.' };
+    return { ok: true, difficulty };
+  }
+  return { ok: true, difficulty: null };
+}
+
+export function catAndDogEventPayload(state: CatAndDogState, move: CatAndDogMove) {
+  return {
+    type: move.type,
+    item: move.type === 'throw' ? move.item : null,
+    power: move.type === 'throw' ? move.power : null,
+    side: state.toAct,
+  };
 }
 
 export function cpuPower(difficulty: Difficulty): number {
@@ -197,10 +225,6 @@ function other(side: Side): Side {
   return side === 'cat' ? 'dog' : 'cat';
 }
 
-function defender(side: Side): Side {
-  return other(side);
-}
-
 function winnerFromMeters(meters: { cat: number; dog: number }): Side | null {
   if (meters.cat >= GIVE_UP_FRAME) return 'dog';
   if (meters.dog >= GIVE_UP_FRAME) return 'cat';
@@ -226,7 +250,7 @@ function withNextWind(state: CatAndDogState, meters: { cat: number; dog: number 
 
 function applyLanding(meters: { cat: number; dog: number }, side: Side, landing: Landing) {
   const next = { ...meters };
-  const target = defender(side);
+  const target = other(side);
   next[target] += landing.add;
   return next;
 }

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { catAndDog, isCatAndDogState, parseCatAndDogMove, type CatAndDogState } from '@playroom/cat-and-dog';
+import { catAndDog, catAndDogEventPayload, isCatAndDogState, parseCatAndDogMove, type CatAndDogState } from '@playroom/cat-and-dog';
 import { connectFour, type ConnectFourState } from '@playroom/connect-four';
 import { DOWNSTAIRS_SLUG } from '@playroom/downstairs';
 import { isWellPlayPayload } from '@playroom/game-core';
@@ -53,12 +53,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       const applied = catAndDog.applyMove(room.state, parsed.move, actor);
       nextState = applied;
       status = catAndDog.getStatus(applied);
-      payload = {
-        type: parsed.move.type,
-        item: parsed.move.type === 'throw' ? parsed.move.item : null,
-        power: parsed.move.type === 'throw' ? parsed.move.power : null,
-        side: room.state.toAct,
-      };
+      payload = catAndDogEventPayload(room.state, parsed.move);
     } else if (room.game_slug === 'connect-four') {
       const column = body.column;
       if (typeof column !== 'number' || !Number.isInteger(column) || column < 0 || column > 6) throw new ApiError('Choose a valid column.', 400);

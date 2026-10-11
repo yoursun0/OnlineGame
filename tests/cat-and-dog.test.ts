@@ -4,6 +4,7 @@ import {
   cpuPower,
   createPlayingState,
   createRematchState,
+  difficultyForStart,
   drawWind,
   landThrow,
   nextCpuMove,
@@ -206,4 +207,11 @@ test('expert wind is only the mild table, and a rematch keeps difficulty and sea
   expect(again.toAct).toBe('dog');
   expect(again.meters).toEqual({ cat: 1, dog: 1 });
   expect(again.winner).toBeNull();
+});
+
+test('a solo start must choose a difficulty before the room starts, and two guests use full wind', () => {
+  expect(difficultyForStart(1, 'level1')).toEqual({ ok: true, difficulty: 'level1' });
+  expect(difficultyForStart(1, 'expert')).toEqual({ ok: true, difficulty: 'expert' });
+  expect(difficultyForStart(1, 'nope')).toEqual({ ok: false, reason: 'Choose a difficulty before starting versus CPU.' });
+  expect(difficultyForStart(2, 'level2')).toEqual({ ok: true, difficulty: null });
 });
