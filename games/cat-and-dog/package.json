@@ -1,0 +1,7 @@
+{
+  "name": "@playroom/cat-and-dog",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": { "@playroom/game-core": "workspace:*" },
+  "exports": { ".": "./src/index.ts" }
+}

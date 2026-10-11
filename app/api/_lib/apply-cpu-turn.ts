@@ -1,3 +1,4 @@
+import { catAndDog, isCatAndDogState, nextCpuMove as nextCatAndDogCpuMove, type CatAndDogState } from '@playroom/cat-and-dog';
 import { connectFour, nextCpuMove as nextConnectFourMove, type ConnectFourState } from '@playroom/connect-four';
 import { nextCpuMove, ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { logApiFailure } from './observability';
@@ -13,6 +14,10 @@ function pendingCpuMove(room: CpuRoom, members: CpuMember[]) {
     if (!isTienGowState(room.state)) return null;
     return pendingTienGowCpuSeat(room.state, members) ? { type: 'tien-gow' as const } : null;
   }
+  if (room.game_slug === 'cat-and-dog') {
+    if (!isCatAndDogState(room.state)) return null;
+    return nextCatAndDogCpuMove(room.state, members);
+  }
   if (room.game_slug === 'connect-four') return nextConnectFourMove(room.state as ConnectFourState, members);
   return nextCpuMove(room.state as TicTacToeState, members);
 }
@@ -25,6 +30,33 @@ export async function applyCpuTurnIfNeeded(room: CpuRoom, members: CpuMember[]) 
   const cpu = members.find((member) => member.is_cpu);
   const move = pendingCpuMove(room, members);
   if (!cpu || !move) return;
+
+  if (room.game_slug === 'cat-and-dog' && isCatAndDogState(room.state) && move && 'type' in move && (move.type === 'throw' || move.type === 'powerUp')) {
+    const state = room.state as CatAndDogState;
+    const catMove = move.type === 'powerUp'
+      ? { type: 'powerUp' as const }
+      : { type: 'throw' as const, item: move.item, power: move.power };
+    const validation = catAndDog.validateMove(state, catMove, { id: cpu.guest_id, seat: cpu.seat });
+    if (!validation.ok) throw new Error(validation.reason);
+    const nextState = catAndDog.applyMove(state, catMove, { id: cpu.guest_id, seat: cpu.seat });
+    const status = catAndDog.getStatus(nextState);
+    const { error } = await getAdminClient().rpc('append_game_event', {
+      p_room_id: room.id,
+      p_guest_id: cpu.guest_id,
+      p_expected_version: room.version,
+      p_state: nextState,
+      p_status: status === 'playing' ? 'playing' : 'finished',
+      p_event_type: 'move',
+      p_payload: {
+        type: catMove.type,
+        item: catMove.type === 'throw' ? catMove.item : null,
+        power: catMove.type === 'throw' ? catMove.power : null,
+        side: state.toAct,
+      },
+    });
+    if (error) throw error;
+    return;
+  }
 
   if (room.game_slug === 'connect-four' && 'column' in move) {
     const state = room.state as ConnectFourState;

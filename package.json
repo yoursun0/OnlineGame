@@ -33,6 +33,7 @@
     "next": "^16.3.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "@playroom/downstairs": "workspace:*"
+    "@playroom/downstairs": "workspace:*",
+    "@playroom/cat-and-dog": "workspace:*"
   }
 }

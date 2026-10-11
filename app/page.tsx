@@ -16,6 +16,7 @@ const copy = {
     stairsDescription: 'Fall the shaft, dodge traps, and keep your life gauge off zero. Solo or Shared well for 2–4 kids.', connectTitle: 'Connect Four',
     connectDescription: 'Four pieces, one clean line, and just enough room for a trap.',
     tienDescription: 'Four seats, Chinese tiles, and a short hand of 天九. Join with one to four humans.',
+    cadDescription: 'Hold, release, and throw over the fence until the other side gives up.',
     workshop: 'In the workshop', wishlist: 'Next on the shelf',
     howEyebrow: 'The tiny ritual', howTitle: 'Three steps. No ceremony.', stepOneTitle: 'Pick a game',
     stepOneBody: 'See the player count, play time, and supported mode before you start.', stepTwoTitle: 'Create or join',
@@ -32,6 +33,7 @@ const copy = {
     ticDescription: '三格連線。規則簡單，但未必容易贏，也很難中途停手。', stairsDescription: '墜入井中、避開陷阱，別讓生命歸零。單人 Solo 或 2–4 人 Shared 共用井現已可玩。',
     connectTitle: '四子棋', connectDescription: '四粒棋連成一線，棋盤不大，剛好放得下一個陷阱。',
     tienDescription: '四人天九桌，骨牌對打。一至四人即可開房入座。',
+    cadDescription: '按住、放開，把東西扔過圍欄，直到對方放棄。',
     workshop: '製作中', wishlist: '下一款遊戲',
     howEyebrow: '簡單開局流程', howTitle: '三步，唔使諗太多。', stepOneTitle: '揀遊戲', stepOneBody: '開局前先看清楚玩家人數、遊戲時間和支援模式。',
     stepTwoTitle: '開房或入房', stepTwoBody: '分享一個短房號，毋須電郵、密碼或永久帳戶。', stepThreeTitle: '準備，開局',
@@ -65,6 +67,15 @@ function cardMeta(slug: string, language: 'en' | 'zh-Hant', text: (typeof copy)[
       title: language === 'en' ? 'Tien Gow' : '打天九',
       description: text.tienDescription,
       icon: '天九',
+      mode: text.turnBased,
+    };
+  }
+  if (slug === 'cat-and-dog') {
+    return {
+      className: 'game-card game-card-cad',
+      title: language === 'en' ? 'Cat-and-Dog' : '貓狗大作戰',
+      description: text.cadDescription,
+      icon: '貓|狗',
       mode: text.turnBased,
     };
   }

@@ -195,6 +195,7 @@ Guest IDs are hashed with `RATE_LIMIT_SALT`; display names, report text, IP addr
 - [Migration notes](supabase/migrations/README.md)
 - [Tic-tac-toe rules](games/tic-tac-toe/rules.md)
 - [Connect Four rules](games/connect-four/rules.md)
+- [Cat-and-Dog rules](games/cat-and-dog/rules.md)
 
 ## Change and release rules
 

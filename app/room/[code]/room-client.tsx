@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CatAndDogDifficulty, CatAndDogTable } from '../../cat-and-dog-table';
 import { ConnectFourBoard } from '../../connect-four-board';
 import { DownstairsWell } from '../../downstairs-well';
 import { TienGowBoard } from '../../tien-gow-board';
+import { isCatAndDogState, type CatAndDogMove, type CatAndDogState, type Difficulty } from '@playroom/cat-and-dog';
 import type { ConnectFourState } from '@playroom/connect-four';
 import { isDownstairsRoomState, type DownstairsRoomState } from '@playroom/downstairs';
 import type { TicTacToeState } from '@playroom/tic-tac-toe';
@@ -44,6 +46,10 @@ function isOwnTurn(room: Room, seat: number) {
     const state = room.state as TienGowView;
     return state.phase !== 'recap' && state.toAct === seat;
   }
+  if (room.game_slug === 'cat-and-dog') {
+    if (!isCatAndDogState(room.state)) return false;
+    return (room.state.toAct === 'cat' && seat === 0) || (room.state.toAct === 'dog' && seat === 1);
+  }
   if (room.game_slug === 'connect-four') {
     const state = room.state as ConnectFourState;
     return (state.nextColor === 'red' && seat === 0) || (state.nextColor === 'yellow' && seat === 1);
@@ -61,16 +67,18 @@ export function RoomClient({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>('level1');
   const lastVersionRef = useRef(0);
   const hasSnapshotRef = useRef(false);
   const animatingRef = useRef(false);
   const playbackGeneration = useRef(0);
   const isConnect = snapshot?.room.game_slug === 'connect-four';
+  const isCat = snapshot?.room.game_slug === 'cat-and-dog';
   const isDownstairs = snapshot?.room.game_slug === 'downstairs';
   const isTienGow = snapshot?.room.game_slug === 'tien-gow';
   const text = language === 'en' ? {
     room: 'Room', back: 'Back to lobby', loading: 'Loading room…', leave: 'Leave room ↗',
-    game: isDownstairs ? '小朋友落樓梯' : isTienGow ? 'Tien Gow' : isConnect ? 'Connect Four' : 'Tic-tac-toe',
+    game: isDownstairs ? '小朋友落樓梯' : isTienGow ? 'Tien Gow' : isCat ? 'Cat-and-Dog' : isConnect ? 'Connect Four' : 'Tic-tac-toe',
     turnBased: 'Turn-based', realTime: 'Real-time',
     players: 'Players', of: 'of', host: 'host', ready: 'Ready', waiting: 'Waiting',
     unready: 'Unready', imReady: 'I’m ready', start: 'Start game →', startVsCpu: 'Start vs CPU →', startSolo: 'Start solo →', startShared: 'Start shared well →',
@@ -81,10 +89,12 @@ export function RoomClient({ code }: { code: string }) {
       ? 'Solo alone, or invite up to three friends for a Shared well (max 4). Live play uses Broadcast; the server stores start, sparse Checkpoints, deaths, and finish. Joins after start are rejected.'
       : isTienGow
         ? 'Share the TGW code. One to four humans can join; empty seats become CPU at start. Seats 0–3 (南/東/北/西) shuffle randomly when the host starts. Host sets Table options in the lobby (lab defaults). Each human only sees their own hand. CPU seats then play one step at a time. Min 1 human; 2–4 humans must all be ready.'
+        : isCat
+        ? 'Share the CAD code. Seat 0 is Cat and seat 1 is Dog; the guests are shuffled at start. Hold, then release, to throw. A solo host picks a difficulty and starts versus CPU. Replay stays available only while both seats are occupied.'
         : 'Share the code with one other player, or start versus CPU. The server owns the room state and every move.',
   } : {
     room: '房間', back: '返回大堂', loading: '正在載入房間…', leave: '離開房間 ↗',
-    game: isDownstairs ? '小朋友落樓梯' : isTienGow ? '打天九' : isConnect ? '四子棋' : '井字過三關',
+    game: isDownstairs ? '小朋友落樓梯' : isTienGow ? '打天九' : isCat ? '貓狗大作戰' : isConnect ? '四子棋' : '井字過三關',
     turnBased: '回合制', realTime: '即時模式',
     players: '玩家', of: '/', host: '房主', ready: '已準備', waiting: '等待中',
     unready: '取消準備', imReady: '我準備好了', start: '開始遊戲 →', startVsCpu: '對戰電腦 →', startSolo: '單人開局 →', startShared: '開始共用井 →',
@@ -95,6 +105,8 @@ export function RoomClient({ code }: { code: string }) {
       ? '可單人即開 Solo 井，或邀請最多三位朋友開 Shared 共用井（最多 4 人）。即時用 Broadcast；伺服器只記開局、稀疏 Checkpoint、死亡與結束。開局後無法再加入。'
       : isTienGow
         ? '分享 TGW 房號。一至四人可加入；空位在開局時由電腦補上。座位 0–3（南／東／北／西）會在房主開局時隨機分配。房主在大廳設定臺面規則（與 lab 預設相同）。每位玩家只看見自己的手牌。電腦之後會逐手出牌。至少 1 人即可開；2–4 人時全員要準備。'
+        : isCat
+        ? '分享 CAD 房號。座位 0 是貓，座位 1 是狗，開局時會把人隨機放進去。按住再放開就能投擲。一個人時先選難度，再對戰電腦。重玩時兩個座位都要有人。'
         : '把房號分享給另一位玩家，或直接開始對戰電腦。伺服器會管理房間狀態並核實每一步。',
   };
 
@@ -189,7 +201,7 @@ export function RoomClient({ code }: { code: string }) {
     finally { animatingRef.current = false; setBusy(false); }
   }
 
-  async function playMove(body: { cell?: number; column?: number } | TienGowMove) {
+  async function playMove(body: { cell?: number; column?: number } | TienGowMove | CatAndDogMove) {
     setBusy(true); setError('');
     holdRoomRefresh();
     try {
@@ -248,6 +260,8 @@ export function RoomClient({ code }: { code: string }) {
   const downstairsState = isDownstairs && isDownstairsRoomState(snapshot.room.state) ? snapshot.room.state : null;
   const tienGowView = isTienGow && isTienGowView(snapshot.room.state) ? snapshot.room.state : null;
   const tgwLobbyTable = isTienGow ? tableFromLobbyState(snapshot.room.state) : null;
+  const catState = isCat && isCatAndDogState(snapshot.room.state) ? snapshot.room.state as CatAndDogState : null;
+  const startBody = isTienGow && tgwLobbyTable ? { table: tgwLobbyTable } : isCat && humanCount === 1 ? { difficulty } : {};
   const canDeal = Boolean(tienGowView && canDealTienGowHand({
     status: snapshot.room.status,
     phase: tienGowView.phase,
@@ -286,7 +300,11 @@ export function RoomClient({ code }: { code: string }) {
           onPersisted={onWellPersisted}
           onError={(message) => setError(translateError(message, language))}
         />
-      : isConnect
+      : isCat && catState
+        ? <CatAndDogTable state={catState} onMove={(move) => void playMove(move)} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
+        : isCat
+        ? <div className="cad-lobby"><div className="waiting-mark">貓|狗<br />{language === 'en' ? 'Cat-and-Dog' : '貓狗大作戰'}</div></div>
+        : isConnect
         ? <ConnectFourBoard state={snapshot.room.state as ConnectFourState} onMove={(column) => void playMove({ column })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
         : <Board state={snapshot.room.state as TicTacToeState} onMove={(cell) => void playMove({ cell })} disabled={busy || snapshot.room.status === 'finished' || !ownTurn} language={language} />
     : isTienGow && tgwLobbyTable
@@ -299,6 +317,8 @@ export function RoomClient({ code }: { code: string }) {
             onChange={(table) => void action('table', { table })}
           />
         </div>
+      : isCat
+      ? <div className="cad-lobby"><div className="waiting-mark">貓|狗<br />{language === 'en' ? 'Cat-and-Dog' : '貓狗大作戰'}</div>{humanCount === 1 ? <CatAndDogDifficulty value={difficulty} onChange={setDifficulty} language={language} /> : null}</div>
       : <div className={`waiting-mark${isConnect ? ' waiting-mark-connect' : ''}${isDownstairs ? ' waiting-mark-well' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '⬤ ⬤' : '× ○'}<br />{isDownstairs ? (humanCount > 1 ? (language === 'en' ? 'Shared well' : '共用井') : (language === 'en' ? 'Solo well' : '單人井')) : isConnect ? '⬤ ⬤' : '○ ×'}</div>;
 
   const startLabel = !canStart
@@ -325,7 +345,7 @@ export function RoomClient({ code }: { code: string }) {
               <span className={isCpu ? 'cpu-badge' : member!.is_ready ? 'ready-label' : 'waiting-label'}>{isCpu ? text.cpu : member!.is_ready ? text.ready : text.waiting}</span>
             </div>;
           })
-        : snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}${isConnect ? ' player-mark-connect' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '' : member.seat === 0 ? 'X' : 'O'}</span><span>{member.is_cpu ? text.cpu : member.display_name}{!member.is_cpu && member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && humanCount > 1 && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !canStart} type="button" onClick={() => void action('start', isTienGow && tgwLobbyTable ? { table: tgwLobbyTable } : {})}>{startLabel}</button>}{canReplay && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('replay')}>{text.replay} <span>→</span></button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
+        : snapshot.members.map((member) => <div className="player-row" key={member.guest_id}><span className={`player-mark player-mark-${member.seat}${isConnect ? ' player-mark-connect' : ''}`}>{isDownstairs ? '⇧' : isConnect ? '' : isCat ? (member.seat === 0 ? (language === 'en' ? 'Cat' : '貓') : (language === 'en' ? 'Dog' : '狗')) : member.seat === 0 ? 'X' : 'O'}</span><span>{member.is_cpu ? text.cpu : member.display_name}{!member.is_cpu && member.guest_id === snapshot.room.host_guest_id ? ` · ${text.host}` : ''}</span><span className={member.is_ready ? 'ready-label' : 'waiting-label'}>{member.is_ready ? text.ready : text.waiting}</span></div>)}</div><div className="room-controls">{snapshot.room.status === 'open' && ownMember && humanCount > 1 && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('ready', { ready: !ownMember.is_ready })}>{ownMember.is_ready ? text.unready : text.imReady} <span>→</span></button>}{snapshot.room.status === 'open' && snapshot.room.host_guest_id === guestId && <button className="button button-dark" disabled={busy || !canStart} type="button" onClick={() => void action('start', startBody)}>{startLabel}</button>}{canReplay && <button className="button button-primary" disabled={busy} type="button" onClick={() => void action('replay')}>{text.replay} <span>→</span></button>}</div><form className="report-form" onSubmit={(event) => { event.preventDefault(); if (reportReason.trim()) void action('report', { reason: reportReason }); }}><label htmlFor="report-reason">{text.reportRoom}</label><input id="report-reason" value={reportReason} maxLength={280} onChange={(event) => { setReportReason(event.target.value); setReportSubmitted(false); }} placeholder={text.reportReason} /><button className="button button-quiet" disabled={busy || !reportReason.trim()} type="submit">{reportSubmitted ? text.reported : text.report}</button></form><p className="room-help">{text.help}</p></aside>
     </section>
   </main>;
 }

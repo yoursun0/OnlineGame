@@ -97,4 +97,14 @@ export const GAME_CATALOG: readonly GameCatalogEntry[] = [
     supports: ['turn_based'],
     available: true,
   },
+  {
+    slug: 'cat-and-dog',
+    title: 'Cat-and-Dog',
+    shortDescription: 'Hold, release, and throw over the fence until the other side gives up.',
+    roomPrefix: 'CAD',
+    players: { min: 2, max: 2 },
+    estimatedMinutes: 8,
+    supports: ['turn_based'],
+    available: true,
+  },
 ];

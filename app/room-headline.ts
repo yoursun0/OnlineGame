@@ -1,3 +1,4 @@
+import { isCatAndDogState, type CatAndDogState, type Side } from '@playroom/cat-and-dog';
 import { connectFour, getWinner as getConnectWinner, type Color, type ConnectFourState } from '@playroom/connect-four';
 import { getWinner, ticTacToe, type TicTacToeState } from '@playroom/tic-tac-toe';
 import { tienGowSeatWind } from './tien-gow-seats';
@@ -11,6 +12,11 @@ function namedSeat(members: HeadlineMember[], seat: number, mark: string) {
 
 function ticTacToeLabel(members: HeadlineMember[], mark: 'X' | 'O') {
   return namedSeat(members, mark === 'X' ? 0 : 1, mark);
+}
+
+function catDogMark(side: Side, language: 'en' | 'zh-Hant') {
+  if (language === 'zh-Hant') return side === 'cat' ? '貓' : '狗';
+  return side === 'cat' ? 'Cat' : 'Dog';
 }
 
 function connectFourMark(color: Color, language: 'en' | 'zh-Hant') {
@@ -94,6 +100,23 @@ export function roomHeadline(input: {
       return zh ? '牌局已開 — 座位已隨機分配' : 'Table seated — seats shuffled';
     }
     return zh ? '等待開局（打天九大廳）' : 'Waiting room — 打天九 lobby';
+  }
+
+  if (input.gameSlug === 'cat-and-dog') {
+    const state = input.state as CatAndDogState;
+    if (!isCatAndDogState(state)) return zh ? '等待開局（貓狗大作戰）' : 'Waiting room — Cat-and-Dog';
+    if (input.status === 'playing') {
+      const label = namedSeat(input.members, state.toAct === 'cat' ? 0 : 1, catDogMark(state.toAct, input.language));
+      return zh ? `輪到: ${label}` : `Turn: ${label}`;
+    }
+    if (input.status === 'finished' && state.winner) {
+      const seat = state.winner === 'cat' ? 0 : 1;
+      const name = input.members.find((member) => member.seat === seat)?.display_name.trim();
+      const side = catDogMark(state.winner, input.language);
+      if (name) return zh ? `${side}勝 — ${name}` : `${side} wins — ${name}`;
+      return zh ? `${side}勝` : `${side} wins`;
+    }
+    return zh ? '等待開局（貓狗大作戰）' : 'Waiting room — Cat-and-Dog';
   }
 
   if (input.gameSlug === 'connect-four') {

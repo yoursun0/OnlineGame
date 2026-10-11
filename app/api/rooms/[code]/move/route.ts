@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { catAndDog, isCatAndDogState, parseCatAndDogMove, type CatAndDogState } from '@playroom/cat-and-dog';
 import { connectFour, type ConnectFourState } from '@playroom/connect-four';
 import { DOWNSTAIRS_SLUG } from '@playroom/downstairs';
 import { isWellPlayPayload } from '@playroom/game-core';
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { code } = await params;
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const body = await readJson(request, 1024) as { cell?: number; column?: number; expectedVersion?: number };
+    const body = await readJson(request, 1024) as { cell?: number; column?: number; expectedVersion?: number; type?: string; item?: string; power?: number };
     if (isWellPlayPayload(body)) throw new ApiError('Realtime well traffic does not use the turn-based move path.', 400);
     await enforceRateLimit(admin, guest.id, 'move', getClientIpHash(request), 12, 10);
     const { room, members } = await getRoomSnapshot(code.toUpperCase(), guest.id);
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!member) throw new Error('You are not a member of this room.');
     const actor = { id: guest.id, seat: member.seat ?? undefined };
 
-    let nextState: ConnectFourState | TicTacToeState | TienGowState;
+    let nextState: ConnectFourState | TicTacToeState | TienGowState | CatAndDogState;
     let status: 'playing' | 'won' | 'draw';
     let payload: Record<string, unknown>;
 
@@ -43,6 +44,21 @@ export async function POST(request: NextRequest, { params }: Params) {
       nextState = applied;
       status = 'playing';
       payload = publicTienGowMovePayload(parsed.move, member.seat);
+    } else if (room.game_slug === 'cat-and-dog') {
+      if (!isCatAndDogState(room.state)) throw new ApiError('Cat-and-Dog state is missing.', 409);
+      const parsed = parseCatAndDogMove(body);
+      if (!parsed.ok) throw new ApiError(parsed.reason, 400);
+      const validation = catAndDog.validateMove(room.state, parsed.move, actor);
+      if (!validation.ok) throw new Error(validation.reason);
+      const applied = catAndDog.applyMove(room.state, parsed.move, actor);
+      nextState = applied;
+      status = catAndDog.getStatus(applied);
+      payload = {
+        type: parsed.move.type,
+        item: parsed.move.type === 'throw' ? parsed.move.item : null,
+        power: parsed.move.type === 'throw' ? parsed.move.power : null,
+        side: room.state.toAct,
+      };
     } else if (room.game_slug === 'connect-four') {
       const column = body.column;
       if (typeof column !== 'number' || !Number.isInteger(column) || column < 0 || column > 6) throw new ApiError('Choose a valid column.', 400);

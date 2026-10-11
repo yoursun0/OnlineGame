@@ -13,7 +13,8 @@ OnlineGame/
 │   ├── tic-tac-toe/             # TIK-XXX
 │   ├── downstairs/              # LAD-XXX
 │   ├── connect-four/            # CON-XXX
-│   └── tien-gow/                # TGW-XXX
+│   ├── tien-gow/                # TGW-XXX
+│   └── cat-and-dog/             # CAD-XXX
 ├── packages/                    # shared code with stable boundaries
 │   ├── game-core/
 │   ├── room-protocol/
@@ -53,6 +54,7 @@ The platform owns:
 | 小朋友落樓梯 | `LAD` | `LAD-ZHW` |
 | Connect Four / 四子棋 | `CON` | `CON-K8P` |
 | 打天九 / Tien Gow | `TGW` | `TGW-4K8` |
+| Cat-and-Dog / 貓狗大作戰 | `CAD` | `CAD-7KQ` |
 
 The prefix is a recognition and routing hint, not a security boundary. The server owns uniqueness, expiry, and authorization.
 

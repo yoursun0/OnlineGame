@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createPlayingState, createRematchState, isCatAndDogState, parseDifficulty } from '@playroom/cat-and-dog';
 import { connectFour } from '@playroom/connect-four';
 import {
   createSharedStartState,
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!isPlayroomRoomCode(normalizedCode)) throw new ApiError(PLAYROOM_ROOM_CODE_HINT, 400);
     const admin = getAdminClient();
     const guest = await getAuthenticatedGuest(request, admin);
-    const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean; table?: unknown };
+    const body = await readJson(request) as { action?: string; displayName?: string; reason?: string; ready?: boolean; table?: unknown; difficulty?: unknown };
     action = body.action ?? 'unknown';
     if (body.action === 'join') {
       const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
@@ -147,6 +148,21 @@ export async function POST(request: NextRequest, { params }: Params) {
           p_payload: { kids: guestIds.length },
         });
         if (startEventError) throw startEventError;
+      } else if (started.room.game_slug === 'cat-and-dog') {
+        const humans = started.members.filter((member) => !member.is_cpu);
+        const difficulty = humans.length === 1 ? parseDifficulty(body.difficulty) : null;
+        if (humans.length === 1 && !difficulty) throw new ApiError('Choose a difficulty before starting versus CPU.', 400);
+        const initial = createPlayingState({ roomCode: normalizedCode, difficulty });
+        const { error: startEventError } = await admin.rpc('append_game_event', {
+          p_room_id: started.room.id,
+          p_guest_id: guest.id,
+          p_expected_version: started.room.version,
+          p_state: initial,
+          p_status: 'playing',
+          p_event_type: 'start',
+          p_payload: { difficulty, humans: humans.length },
+        });
+        if (startEventError) throw startEventError;
       }
       logRoomLifecycle('start', { roomCode: normalizedCode, guestId: guest.id, status: 'playing' });
     } else if (body.action === 'leave') {
@@ -194,7 +210,10 @@ export async function POST(request: NextRequest, { params }: Params) {
         throw new ApiError('Wait until 結 before dealing the next hand.', 400);
       }
       let initialState;
-      if (current.room.game_slug === 'connect-four') {
+      if (current.room.game_slug === 'cat-and-dog') {
+        if (!isCatAndDogState(current.room.state)) throw new ApiError('Cat-and-Dog state is missing.', 409);
+        initialState = createRematchState(current.room.state);
+      } else if (current.room.game_slug === 'connect-four') {
         initialState = connectFour.createInitialState();
       } else if (current.room.game_slug === DOWNSTAIRS_SLUG) {
         const guestIds = downstairsReplayGuestIds(

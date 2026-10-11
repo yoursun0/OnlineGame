@@ -38,7 +38,7 @@ test('join-code hints and the create-room API accept TGW alongside TIK, CON, and
 });
 
 test('traditional chinese join copy names TGW codes', () => {
-  expect(translateError(PLAYROOM_ROOM_CODE_HINT, 'zh-Hant')).toBe('請輸入類似 TIK-7Q4、CON-K8P、LAD-ZHW 或 TGW-4K8 的房號。');
+  expect(translateError(PLAYROOM_ROOM_CODE_HINT, 'zh-Hant')).toContain('TGW-4K8');
 });
 
 test('a TGW waiting room does not borrow tic-tac-toe turn copy', () => {

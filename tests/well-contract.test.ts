@@ -29,6 +29,7 @@ test('the catalogue exposes turn-based boards, the realtime downstairs well, and
     ['connect-four', ['turn_based'], true, 'CON', { min: 2, max: 2 }],
     ['downstairs', ['realtime'], true, 'LAD', { min: 1, max: 4 }],
     ['tien-gow', ['turn_based'], true, 'TGW', { min: 1, max: 4 }],
+    ['cat-and-dog', ['turn_based'], true, 'CAD', { min: 2, max: 2 }],
   ]);
 });
 
