@@ -423,57 +423,44 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .well-life-seg.is-filled { background: var(--well-life-fill, var(--color-hp)); }
 .game-card-cad { background: #d7e36a; }
-.cad-play { width: min(100%, 640px); display: grid; gap: 14px; }
-.cad-meters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cad-meter { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; color: #f4efe4; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-.cad-meter i { height: 10px; display: block; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.12); }
-.cad-meter b { display: block; height: 100%; width: 0; background: #f2c14e; }
-.cad-meter-warn b { background: #e07a3d; }
-.cad-meter-gone b { background: #d4534e; }
-.cad-meter-dog b { background: #e7a07a; }
-.cad-meter-dog.cad-meter-warn b { background: #c46a3a; }
-.cad-stage { position: relative; aspect-ratio: 600 / 430; overflow: hidden; border-radius: 22px; background: radial-gradient(circle at 50% 18%, rgba(242, 193, 78, .28), transparent 28%), linear-gradient(#1c3a2e, #10241c 72%); box-shadow: inset 0 0 0 1px rgba(242, 193, 78, .28); }
-.cad-actor { position: absolute; bottom: 16%; width: 18%; height: 46%; }
-.cad-cat { left: 10%; }
-.cad-dog { right: 10%; }
-.cad-head, .cad-body, .cad-ears, .cad-tail { position: absolute; display: block; }
-.cad-cat .cad-body { left: 18%; right: 18%; bottom: 0; height: 46%; border-radius: 40% 40% 18% 18%; background: #1b1a24; }
-.cad-cat .cad-head { left: 16%; right: 16%; bottom: 40%; height: 34%; border-radius: 46% 46% 40% 40%; background: #f4efe4; }
-.cad-cat .cad-ears { left: 18%; right: 18%; bottom: 68%; height: 22%; background: linear-gradient(90deg, transparent 0 18%, #1b1a24 18% 38%, transparent 38% 62%, #1b1a24 62% 82%, transparent 82%); clip-path: polygon(20% 100%, 28% 0, 38% 100%, 62% 100%, 72% 0, 82% 100%); }
-.cad-cat .cad-tail { right: -8%; bottom: 28%; width: 28%; height: 8%; border-radius: 999px; background: #1b1a24; transform: rotate(-28deg); }
-.cad-dog .cad-body { left: 12%; right: 12%; bottom: 0; height: 42%; border-radius: 46% 46% 16% 16%; background: #c46a3a; }
-.cad-dog .cad-head { left: 8%; right: 8%; bottom: 36%; height: 36%; border-radius: 46% 46% 42% 42%; background: #f4efe4; }
-.cad-dog .cad-ears { left: 0; right: 0; bottom: 58%; height: 18%; background: linear-gradient(90deg, #c46a3a 0 34%, transparent 34% 66%, #c46a3a 66%); border-radius: 0 0 40% 40%; }
-.cad-dog .cad-tail { left: -12%; bottom: 24%; width: 30%; height: 9%; border-radius: 999px; background: #c46a3a; transform: rotate(24deg); }
-.cad-pose-2 { transform: translateY(-6%) rotate(-8deg); }
-.cad-pose-3 { transform: translateY(10%) scaleY(.82); }
-.cad-pose-4 { transform: translateY(22%) rotate(16deg); }
-.cad-fence { position: absolute; left: 46%; top: 18%; bottom: 8%; width: 8%; display: flex; justify-content: center; gap: 4px; background: repeating-linear-gradient(90deg, #d7c4a3 0 3px, transparent 3px 8px); box-shadow: 0 0 0 1px rgba(215, 196, 163, .4); }
-.cad-wind { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 999px; color: #1c3a2e; background: #f2c14e; font-size: 11px; font-weight: 800; white-space: nowrap; }
-.cad-shot { position: absolute; top: 42%; width: 18px; height: 18px; border-radius: 50%; background: #f4efe4; box-shadow: 0 6px 0 rgba(0,0,0,.18); }
-.cad-shot-stink { background: #8fbf45; border-radius: 40% 60% 50% 50%; }
-.cad-shot-cat { left: 62%; }
-.cad-shot-dog { left: 28%; }
-.cad-shot-miss { top: 30%; left: 47%; opacity: .55; }
-.cad-readout, .cad-hold small, .cad-difficulty small { color: var(--muted); }
+
+.cad-play { width: min(100%, 680px); display: grid; gap: 10px; }
+.cad-stage { position: relative; aspect-ratio: 600 / 430; overflow: hidden; border-radius: 18px; box-shadow: 0 16px 0 rgba(0,0,0,.12); }
+.cad-svg { width: 100%; height: 100%; display: block; }
+.cad-hud-items { position: absolute; top: 8px; right: 10px; display: flex; gap: 6px; }
+.cad-round { width: 36px; height: 36px; display: grid; place-items: center; border: 2px solid #17324a; border-radius: 50%; color: #17324a; background: radial-gradient(circle at 35% 30%, #fff, #d7e7f4 55%, #9eb4c8); font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif; font-size: 13px; font-weight: 800; box-shadow: 0 2px 0 #17324a; }
+.cad-round-on { background: radial-gradient(circle at 35% 30%, #fff6c8, #f6c31a 60%, #e0a40a); }
+.cad-round-powerThrow { background: radial-gradient(circle at 35% 30%, #ffd0c8, #ef4b3a 62%, #b42318); }
+.cad-round-stinkBomb { background: radial-gradient(circle at 35% 30%, #6d7868, #2c342c 70%); }
+.cad-round-powerUp { background: radial-gradient(circle at 35% 30%, #fff, #e7eef4 60%); color: #17324a; }
+.cad-glyph-can, .cad-glyph-bomb { width: 12px; height: 16px; display: block; border-radius: 3px; background: #3aa86a; box-shadow: inset 0 3px 0 #f4efe4; }
+.cad-glyph-bomb { border-radius: 50%; background: #1b1a24; box-shadow: 4px -6px 0 -2px #1b1a24; }
+.cad-grab { position: absolute; border: 0; background: transparent; }
+.cad-grab-cat { left: 12%; bottom: 18%; width: 18%; height: 34%; }
+.cad-grab-dog { right: 8%; bottom: 16%; width: 18%; height: 34%; }
+.cad-grab:focus-visible { outline: 3px solid #f6c31a; outline-offset: 2px; }
+.cad-winding .cad-arm { transform-origin: center; animation: cad-windup .28s ease-in-out infinite alternate; }
+.cad-arm-cat { transform-origin: 146px 252px; }
+.cad-arm-dog { transform-origin: 508px 258px; }
+@keyframes cad-windup { from { transform: rotate(0deg); } to { transform: rotate(-28deg); } }
+.cad-flight { offset-rotate: 0deg; animation: cad-fly .78s cubic-bezier(.16,.72,.2,1) forwards; }
+@keyframes cad-fly { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+.cad-stars { animation: cad-pop .45s ease-out both; }
+@keyframes cad-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.cad-readout, .cad-difficulty small { color: var(--muted); }
 .cad-readout { margin: 0; font-size: 14px; }
 .cad-items, .cad-difficulty { display: flex; flex-wrap: wrap; gap: 8px; }
-.cad-item, .cad-hold { border: 1px solid rgba(255,255,255,.16); border-radius: 14px; color: var(--paper); background: rgba(255,255,255,.06); }
-.cad-item { min-height: 40px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+.cad-item, .cad-hold { border: 2px solid #17324a; border-radius: 14px; color: #17324a; background: #f6c31a; }
+.cad-item { min-height: 40px; padding: 8px 12px; font-size: 13px; font-weight: 800; }
 .cad-item small, .cad-item b { display: block; }
-.cad-item b { font-size: 13px; }
-.cad-item-on, .cad-hold-on { color: #1c3a2e; background: #f2c14e; border-color: #f2c14e; }
-.cad-hold { min-height: 64px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 16px; text-align: left; }
-.cad-hold strong { grid-row: 1 / span 2; font-family: var(--display); font-size: 32px; }
-.cad-hold small { grid-column: 1; }
-.cad-lobby { width: min(100%, 640px); display: grid; gap: 16px; }
+.cad-item-on { background: #fff6c8; }
+.cad-hold { position: relative; min-height: 64px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; overflow: hidden; padding: 10px 16px; text-align: left; box-shadow: 0 4px 0 #17324a; }
+.cad-hold strong { grid-row: 1 / span 2; font-family: "Arial Rounded MT Bold", var(--display), sans-serif; font-size: 32px; }
+.cad-hold i { position: absolute; left: 0; bottom: 0; height: 6px; background: #ef3b3b; }
+.cad-hold-on { background: #fff0a8; }
+.cad-lobby { width: min(100%, 680px); display: grid; gap: 16px; }
 .cad-lobby .waiting-mark { width: 100%; aspect-ratio: 600 / 280; }
 @media (prefers-reduced-motion: reduce) {
-  .cad-shot, .cad-pose-2, .cad-pose-3, .cad-pose-4 { transition: none; }
+  .cad-flight { animation: none; offset-distance: 100%; }
+  .cad-winding .cad-arm, .cad-stars { animation: none; }
 }
-
-.cad-warn-face .cad-face { position: absolute; left: 22%; right: 22%; bottom: 46%; height: 16%; border-radius: 40%; background:
-  radial-gradient(circle at 32% 42%, #1b1a24 0 2px, transparent 3px),
-  radial-gradient(circle at 68% 42%, #1b1a24 0 2px, transparent 3px),
-  radial-gradient(circle at 50% 72%, #d4534e 0 5px, transparent 6px); }
-.cad-dog.cad-warn-face .cad-face { bottom: 42%; }
